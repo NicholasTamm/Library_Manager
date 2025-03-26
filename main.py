@@ -133,7 +133,39 @@ def initialize_db():
 
 
 
+def find_item(itemID:str = "", title:str = "", authorFirstName:str = "",
+              authorLastName:str = "", formatType:str = ""):
+    '''
+    Find an item in the library
+    '''
 
+    # filter out params that are empty string
+    filtered_params = {key: value for key, value in locals().items() if value != ""}
+
+    # separate the attributes from their values so that we can append properly into query string
+    # attributes = list(filtered_params.keys())
+    # values = list(filtered_params.values())
+
+    myQuery = '''
+    SELECT * 
+    FROM Item I
+    WHERE '''
+
+    for i, (attribute, value) in enumerate(filtered_params.items()):
+        if i > 0:
+            myQuery += " AND "
+
+        myQuery += f"{attribute} = {value}"
+
+
+    print(myQuery)
+    #
+    # for i,filter in enumerate(filters):
+    #     if filter != "":
+    #         if i != 0:
+    #             myQuery += " AND "
+    #     myQuery += filter
+    # print(myQuery)
 
 # TODO: create DB functions
 '''
@@ -152,41 +184,43 @@ def main():
     if not os.path.exists('library.db'):
         initialize_db()
 
+    find_item("3001120", "title", "firstName")
+
 
 
 if __name__ == "__main__":
     main()
 
-conn = sqlite3.connect('library.db')
-print("Opened database successfully \n")
-x = True
-while x == True:
-    print("\nSelect your option:\n")
-    print("1 - Borrow an item from the library")
-    print("2 - Return a borrowed item")
-    print("3 - Donate an item to the library")
-    print("4 - Find an event in the library")
-    print("5 - Register for an event in the library")
-    print("6 - Volunteer for the library")
-    print("7 - Ask for help from a librarian")
-    print("x - Close application\n")
-    choice = input('> ')
-   
-    if choice == 'x':
-        print("Closing application...")
-        break
-    elif choice == '1':
-        print("bruh")
-    elif choice == '2':
-        print("bruh")
-    elif choice == '3':
-        print("bruh")
-    elif choice == '4':
-        print("bruh")
-    elif choice == '5':
-        print("bruh")
-    elif choice == '6':
-        print("bruh")    
-    elif choice == '7':
-        print("bruh")
+# conn = sqlite3.connect('library.db')
+# print("Opened database successfully \n")
+# x = True
+# while x == True:
+#     print("\nSelect your option:\n")
+#     print("1 - Borrow an item from the library")
+#     print("2 - Return a borrowed item")
+#     print("3 - Donate an item to the library")
+#     print("4 - Find an event in the library")
+#     print("5 - Register for an event in the library")
+#     print("6 - Volunteer for the library")
+#     print("7 - Ask for help from a librarian")
+#     print("x - Close application\n")
+#     choice = input('> ')
+#
+#     if choice == 'x':
+#         print("Closing application...")
+#         break
+#     elif choice == '1':
+#         print("bruh")
+#     elif choice == '2':
+#         print("bruh")
+#     elif choice == '3':
+#         print("bruh")
+#     elif choice == '4':
+#         print("bruh")
+#     elif choice == '5':
+#         print("bruh")
+#     elif choice == '6':
+#         print("bruh")
+#     elif choice == '7':
+#         print("bruh")
 
