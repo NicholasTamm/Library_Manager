@@ -155,7 +155,7 @@ def initialize_db():
 
 
 def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
-              authorLastName: str = "", formatType: str = ""):
+              authorLastName: str = "", format: str = ""):
     '''
     Find an item in the library
     '''
@@ -173,11 +173,13 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
     WHERE '''
 
     for i, (attribute, value) in enumerate(filtered_params.items()):
-        if i == 0:
+        if i > 0:
+            myQuery += " AND "
+
+        if attribute == "itemID":
             myQuery += f"{attribute}={value}"
         else:
-            myQuery += f" AND {attribute}='{value}'"
-
+            myQuery += f"{attribute}='{value}'"
 
     print(myQuery)
     ### TODO: test the execution of the query
@@ -185,9 +187,16 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
         cur = conn.cursor()
         try:
             cur.execute(myQuery)
+            rows = cur.fetchall()
+
+            if not rows:
+                print("No matching items found")
+            else:
+                for row in rows:
+                    print(row)
+
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
-
 
 
 # TODO: create DB functions
@@ -208,70 +217,58 @@ def main():
     if not os.path.exists('library.db'):
         initialize_db()
 
-    with sqlite3.connect("library.db") as conn:
-        cur = conn.cursor()
+    while True:
+        print(MENU_OPTIONS)
+        choice = input('> ')
 
-        cur.execute("""
-               INSERT INTO Item (itemID, title, authorFirstName, authorLastName, format, isBorrowed, isAdded) 
-               VALUES (301023, 'George', 'curious', 'Brown', 'Children', 1, 0);
-               """)
+        match choice.lower():
+            case '1':
+                print('\n' * 5)
+                print('-' * 30)
+                print('''Press enter if unknown or you want to skip.
+                    Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
 
-        conn.commit()
+                # list to record all of the parameters to feed into function
+                params = []
+
+                for option in FIND_ITEM_MENU_INPUTS:
+                    # print out each filter option and get the input
+                    print(option)
+                    find_input = input("> ")
+                    # if the input is x break the loop
+                    if find_input.lower() == 'x':
+                        break
+                    params.append(find_input)
+
+                # check for illegal cases
+                if params == [] or all(params == "" for i in params):
+                    print("Must enter at least one parameter!")
+                    break
+
+                find_item(*params)
+                input('press enter to continute...')
+
+            case '2':
+                print("not available yet")
+            case '3':
+                print("not available yet")
+            case '4':
+                print("not available yet")
+            case '5':
+                print("not available yet")
+            case '6':
+                print("not available yet")
+            case '7':
+                print("not available yet")
+            case 'x':
+                print("Closing application...")
+                break
+            case _:
+                print(f"You entered {choice}, please enter a valid menu option")
+
+        time.sleep(2)
+        print('\n' * 10)
 
 
 if __name__ == "__main__":
     main()
-
-while True:
-    print(MENU_OPTIONS)
-    choice = input('> ')
-
-    match choice.lower():
-        case '1':
-            print('\n' * 5)
-            print('-' * 30)
-            print('''Press enter if unknown or you want to skip.
-            Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
-
-            # list to record all of the parameters to feed into function
-            params = []
-
-            for option in FIND_ITEM_MENU_INPUTS:
-                # print out each filter option and get the input
-                print(option)
-                find_input = input("> ")
-                # if the input is x break the loop
-                if find_input.lower() == 'x':
-                    break
-                params.append(find_input)
-
-            # check for illegal cases
-            if params == [] or all(params == "" for i in params):
-                print("Must enter at least one parameter!")
-                break
-
-            find_item(*params)
-            input('press enter to continute...')
-
-
-
-        case '2':
-            print("not available yet")
-        case '3':
-            print("not available yet")
-        case '4':
-            print("not available yet")
-        case '5':
-            print("not available yet")
-        case '6':
-            print("not available yet")
-        case '7':
-            print("not available yet")
-        case 'x':
-            print("Closing application...")
-            break
-        case _:
-            print(f"You entered {choice}, please enter a valid menu option")
-
-    time.sleep(2)
-    print('\n' * 10)
