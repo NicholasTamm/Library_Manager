@@ -1,5 +1,27 @@
 import os.path
 import sqlite3
+import time
+
+MENU_OPTIONS = '''
+Select your option:
+
+1 - Borrow an item from the library
+2 - Return a borrowed item
+3 - Donate an item to the library
+4 - Find an event in the library
+5 - Register for an event in the library
+6 - Volunteer for the library
+7 - Ask for help from a librarian
+x - Close application
+'''
+
+FIND_ITEM_MENU_INPUTS = [
+    'ItemID: ',
+    'Title: ',
+    'author\'s first name: ',
+    'author\'s last name: ',
+    'format: '
+]
 
 
 def initialize_db():
@@ -16,7 +38,9 @@ def initialize_db():
         authorFirstName TEXT CHECK (LENGTH(authorFirstName) <= 50), 
         authorLastName TEXT CHECK (LENGTH(authorLastName) <= 100), 
         format TEXT CHECK (format IN ('Book', 'eBook', 'CD', 'scientific journal', 'record', 'DVD', 'Blu ray', 'magazine')),
+        isBorrowed INTEGER CHECK (isBorrowed IN (0, 1)),
         isAdded INTEGER CHECK (isAdded IN (0, 1))
+        
     );
     '''
     create_Fiction = '''
@@ -127,14 +151,11 @@ def initialize_db():
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
-
     # TODO: implement csv reading capabillity
 
 
-
-
-def find_item(itemID:str = "", title:str = "", authorFirstName:str = "",
-              authorLastName:str = "", formatType:str = ""):
+def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
+              authorLastName: str = "", formatType: str = ""):
     '''
     Find an item in the library
     '''
@@ -152,20 +173,22 @@ def find_item(itemID:str = "", title:str = "", authorFirstName:str = "",
     WHERE '''
 
     for i, (attribute, value) in enumerate(filtered_params.items()):
-        if i > 0:
-            myQuery += " AND "
-
-        myQuery += f"{attribute} = {value}"
+        if i == 0:
+            myQuery += f"{attribute}={value}"
+        else:
+            myQuery += f" AND {attribute}='{value}'"
 
 
     print(myQuery)
-    #
-    # for i,filter in enumerate(filters):
-    #     if filter != "":
-    #         if i != 0:
-    #             myQuery += " AND "
-    #     myQuery += filter
-    # print(myQuery)
+    ### TODO: test the execution of the query
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(myQuery)
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+
 
 # TODO: create DB functions
 '''
@@ -179,48 +202,76 @@ Ask for help from a librarian
 
 '''
 
+
 def main():
     # initialize DB if it doesnt already exist
     if not os.path.exists('library.db'):
         initialize_db()
 
-    find_item("3001120", "title", "firstName")
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
 
+        cur.execute("""
+               INSERT INTO Item (itemID, title, authorFirstName, authorLastName, format, isBorrowed, isAdded) 
+               VALUES (301023, 'George', 'curious', 'Brown', 'Children', 1, 0);
+               """)
+
+        conn.commit()
 
 
 if __name__ == "__main__":
     main()
 
-# conn = sqlite3.connect('library.db')
-# print("Opened database successfully \n")
-# x = True
-# while x == True:
-#     print("\nSelect your option:\n")
-#     print("1 - Borrow an item from the library")
-#     print("2 - Return a borrowed item")
-#     print("3 - Donate an item to the library")
-#     print("4 - Find an event in the library")
-#     print("5 - Register for an event in the library")
-#     print("6 - Volunteer for the library")
-#     print("7 - Ask for help from a librarian")
-#     print("x - Close application\n")
-#     choice = input('> ')
-#
-#     if choice == 'x':
-#         print("Closing application...")
-#         break
-#     elif choice == '1':
-#         print("bruh")
-#     elif choice == '2':
-#         print("bruh")
-#     elif choice == '3':
-#         print("bruh")
-#     elif choice == '4':
-#         print("bruh")
-#     elif choice == '5':
-#         print("bruh")
-#     elif choice == '6':
-#         print("bruh")
-#     elif choice == '7':
-#         print("bruh")
+while True:
+    print(MENU_OPTIONS)
+    choice = input('> ')
 
+    match choice.lower():
+        case '1':
+            print('\n' * 5)
+            print('-' * 30)
+            print('''Press enter if unknown or you want to skip.
+            Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
+
+            # list to record all of the parameters to feed into function
+            params = []
+
+            for option in FIND_ITEM_MENU_INPUTS:
+                # print out each filter option and get the input
+                print(option)
+                find_input = input("> ")
+                # if the input is x break the loop
+                if find_input.lower() == 'x':
+                    break
+                params.append(find_input)
+
+            # check for illegal cases
+            if params == [] or all(params == "" for i in params):
+                print("Must enter at least one parameter!")
+                break
+
+            find_item(*params)
+            input('press enter to continute...')
+
+
+
+        case '2':
+            print("not available yet")
+        case '3':
+            print("not available yet")
+        case '4':
+            print("not available yet")
+        case '5':
+            print("not available yet")
+        case '6':
+            print("not available yet")
+        case '7':
+            print("not available yet")
+        case 'x':
+            print("Closing application...")
+            break
+        case _:
+            print(f"You entered {choice}, please enter a valid menu option")
+
+    time.sleep(2)
+    print('\n' * 10)
