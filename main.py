@@ -144,6 +144,7 @@ Find an event in the library
 Register for an event in the library
 Volunteer for the library
 Ask for help from a librarian
+
 '''
 
 def main():
@@ -155,4 +156,37 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+conn = sqlite3.connect('library.db')
+print("Opened database successfully \n")
+x = True
+while x == True:
+    print("\nSelect your option:\n")
+    print("1 - Borrow an item from the library")
+    print("2 - Return a borrowed item")
+    print("3 - Donate an item to the library")
+    print("4 - Find an event in the library")
+    print("5 - Register for an event in the library")
+    print("6 - Volunteer for the library")
+    print("7 - Ask for help from a librarian")
+    print("x - Close application\n")
+    choice = input('> ')
+   
+    if choice == 'x':
+        print("Closing application...")
+        break
+    elif choice == '1':
+        print("bruh")
+    elif choice == '2':
+        print("bruh")
+    elif choice == '3':
+        print("bruh")
+    elif choice == '4':
+        print("bruh")
+    elif choice == '5':
+        print("bruh")
+    elif choice == '6':
+        print("bruh")    
+    elif choice == '7':
+        print("bruh")
 
