@@ -27,6 +27,32 @@ OPTIONS_7 = '''
 Please select what kind of assistance you require:
 
 '''
+def cheeckPatronIDValid(PatronID: int)->bool:
+    myQuery = '''
+    SELECT COUNT(*)
+    FROM Patron
+    WHERE patronID = ?'''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(myQuery, (PatronID,))
+            rows = cur.fetchall()
+
+            match(len(rows)):
+                case 0:
+                    return False
+                case 1:
+                    return True
+                case _:
+                    for row in rows:
+                        print(row)
+                    print("more than one PatronID!")
+
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
 
 def initialize_db():
     '''
@@ -62,7 +88,7 @@ def initialize_db():
 	    FOREIGN KEY(itemID) REFERENCES Item(itemID) ON DELETE CASCADE
     );
     '''
-    create_patron = ''' 
+    create_Patron = ''' 
     CREATE TABLE Patron (
     	patronID INTEGER PRIMARY KEY AUTOINCREMENT,
     	firstName TEXT CHECK (LENGTH(firstName) <= 50), 
