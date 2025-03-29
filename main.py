@@ -23,6 +23,10 @@ FIND_ITEM_MENU_INPUTS = [
     'format: '
 ]
 
+OPTIONS_7 = '''
+Please select what kind of assistance you require:
+
+'''
 
 def initialize_db():
     '''
@@ -73,6 +77,14 @@ def initialize_db():
     	position TEXT, 
     	salary INTEGER
     ); 
+    '''
+    create_EmployeeEmail = '''
+
+    CREATE TABLE EmployeeEmail (
+        employeeID INTEGER PRIMARY KEY,
+        email TEXT
+    );
+
     '''
     create_Volunteer = ''' 
     CREATE TABLE Volunteer (
@@ -141,6 +153,7 @@ def initialize_db():
             cur.execute(create_NonFiction)
             cur.execute(create_patron)
             cur.execute(create_Employee)
+            cur.execute(create_EmployeeEmail)
             cur.execute(create_Volunteer)
             cur.execute(create_Event)
             cur.execute(create_Loan)
@@ -152,7 +165,6 @@ def initialize_db():
             print(f"sqlite encountered error: {e}")
 
     # TODO: implement csv reading capabillity
-
 
 def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
               authorLastName: str = "", format: str = ""):
@@ -169,7 +181,7 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
 
     myQuery = '''
     SELECT * 
-    FROM Item I
+    FROM Item I 
     WHERE '''
 
     for i, (attribute, value) in enumerate(filtered_params.items()):
@@ -198,6 +210,21 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
+def librarian_help():
+    myQuery = '''
+    SELECT E1.firstName, E1.lastName, E2.email 
+    FROM Employee E1 JOIN EmployeeEmail E2 ON E1.employeeID = E2.employeeID
+    WHERE E1.position = 'Librarian'; 
+    '''
+    with sqlite3.connect("library.db") as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(myQuery)
+            rows = cur.fetchall()
+            for first, last, email in rows:
+                print(f"{first} {last} | {email}")
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
 
 # TODO: create DB functions
 '''
@@ -259,10 +286,41 @@ def main():
             case '6':
                 print("not available yet")
             case '7':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                print("Here are the emails of our Librarians. Please contact them for any inquries.")
+                librarian_help()
+                input('press enter to continute...')
+
+            
             case 'x':
                 print("Closing application...")
                 break
+            case 'p':
+                import sqlite3
+
+                print("Connecting to library.db and printing all table contents...\n")
+
+                with sqlite3.connect("library.db") as conn:
+                    cur = conn.cursor()
+
+                    # Get all user-defined table names
+                    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+                    tables = [row[0] for row in cur.fetchall()]
+
+                    for table in tables:
+                        print(f"\n--- {table} ---")
+                        try:
+                            cur.execute(f"SELECT * FROM {table}")
+                            rows = cur.fetchall()
+                            for row in rows:
+                                print(row)
+                            if not rows:
+                                print("(No rows)")
+                        except sqlite3.Error as e:
+                            print(f"Error reading table {table}: {e}")
+
+                input("\nDone. Press enter to continue...")
             case _:
                 print(f"You entered {choice}, please enter a valid menu option")
 
