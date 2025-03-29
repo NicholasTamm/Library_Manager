@@ -212,6 +212,19 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
+
+def return_item(userPatronID:int):
+    '''
+    Drops row from loan relation. Update corresponding Item record isBorrowed to 0.
+    '''
+
+    # query loans under PatronID
+
+    # ask for input as which
+    pass
+
+# TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
+
 def librarian_help():
     myQuery = '''
     SELECT E1.firstName, E1.lastName, E2.email 
@@ -237,10 +250,27 @@ Find an event in the library
 Register for an event in the library
 Volunteer for the library
 Ask for help from a librarian
+    - implement ticketing system
+    - allow user to register as Patron
 
 '''
 
 def runUI():
+
+    # check if current user is a patron or just going to volunteer
+    # grab the patronID which will be used for operations such as borrowing, returning, etc.
+    print('''
+    Welcome to the Local Library!\n
+    Please enter your PatronId to get full access to library services.\n
+    If you are looking to volunteer, donate items, find event, or register as patron, enter 0 to continue
+    ''')
+    print("\n" * 4)
+    print("PatronID:")
+
+    currentPatron = input("> ")
+
+    #TODO: implement current patron usage
+
     while True:
         print(MENU_OPTIONS)
         choice = input('> ')
