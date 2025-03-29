@@ -179,26 +179,27 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
     # attributes = list(filtered_params.keys())
     # values = list(filtered_params.values())
 
-    myQuery = '''
+    FindItemQuery = '''
     SELECT * 
     FROM Item I 
-    WHERE '''
+    WHERE 
+    '''
 
     for i, (attribute, value) in enumerate(filtered_params.items()):
         if i > 0:
-            myQuery += " AND "
+            FindItemQuery += " AND "
 
         if attribute == "itemID":
-            myQuery += f"{attribute}={value}"
+            FindItemQuery += f"{attribute}={value}"
         else:
-            myQuery += f"{attribute}='{value}'"
+            FindItemQuery += f"{attribute}='{value}'"
 
-    print(myQuery)
+    print(FindItemQuery)
     ### TODO: test the execution of the query
     with sqlite3.connect("library.db") as conn:
         cur = conn.cursor()
         try:
-            cur.execute(myQuery)
+            cur.execute(FindItemQuery)
             rows = cur.fetchall()
 
             if not rows:
