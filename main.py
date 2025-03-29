@@ -214,15 +214,55 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
             print(f"sqlite encountered error: {e}")
 
 
-def return_item(userPatronID:int):
+def return_item(loanID: int):
     '''
     Drops row from loan relation. Update corresponding Item record isBorrowed to 0.
+
     '''
 
-    # query loans under PatronID
+    # query strings
+    loanQuery = '''
+    Select itemID
+    FROM Loan
+    WHERE loanID = ?
+    '''
 
-    # ask for input as which
-    pass
+    UpdateItemQuery = '''
+    UPDATE Item
+    SET isBorrowed = 0
+    WHERE itemID = ?
+    '''
+
+    UpdateLoanQuery = '''
+    UPDATE Loan
+    SET isReturned = 1
+    WHERE loanID = ? AND itemID = ?
+    '''
+
+    # open connections
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            # find the desired loan
+            cur.execute(loanQuery, (loanID,))
+            rows = cur.fetchall()
+
+            # shouldn't be possible but for debug purpose
+            if len(rows) != 1:
+                print("ERROR ENCOUNTER MORE THAN ONE ITEM WITH CORRESPONDING ITEMID")
+            else:
+                itemID = rows[0][0]
+                cur.execute(UpdateItemQuery, (itemID,))
+                cur.execute(UpdateLoanQuery, (loanID, itemID))
+                conn.commit()
+
+        # debugging purposes
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+
+
+
 
 # TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
 
