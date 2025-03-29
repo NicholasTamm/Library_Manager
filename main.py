@@ -110,9 +110,11 @@ def initialize_db():
     CREATE TABLE Loan (
         loanID INTEGER PRIMARY KEY AUTOINCREMENT, 
         itemID INTEGER NOT NULL, 
+        patronID INTEGER NOT NULL,
         dueDate DATE NOT NULL, 
         isReturned INTEGER CHECK (isReturned in (0, 1)), 
-        FOREIGN KEY (itemID) REFERENCES Item(ItemID) 
+        FOREIGN KEY (itemID) REFERENCES Item(itemID),
+        FOREIGN KEY (patronID) REFERENCES Patron(patronID)
     ); 
     '''
     create_Fine = ''' 
