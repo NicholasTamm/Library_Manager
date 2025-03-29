@@ -23,6 +23,17 @@ FIND_ITEM_MENU_INPUTS = [
     'format: '
 ]
 
+OPTIONS_4 = '''
+Select your option for the targeted audience:
+
+1. Children
+2. Adults
+3. Seniors
+4. Everyone
+5. All events
+
+'''
+
 OPTIONS_7 = '''
 Please select what kind of assistance you require:
 
@@ -225,6 +236,72 @@ def return_item(userPatronID:int):
 
 # TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
 
+def find_event(recommended):
+    myQuery = '''
+    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time 
+    FROM Event
+    '''
+
+    match recommended:
+        case '1': 
+            myQuery += " WHERE advisedFor = 'Children'"
+        case '2':
+            myQuery += " WHERE advisedFor = 'Adults'"
+        case '3':
+            myQuery += " WHERE advisedFor = 'Seniors'"
+        case '4': 
+            myQuery += " WHERE advisedFor = 'Everyone'"
+        case '5':
+            pass
+        case _:
+            print(f"You entered {recommended}, please enter a valid menu option")
+            return  # exit function early if input is invalid
+
+    with sqlite3.connect("library.db") as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(myQuery)
+            rows = cur.fetchall()
+            for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
+                print(f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+def register_event(currentPatron):
+    myQuery = '''
+    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time 
+    FROM Event
+    '''
+    with sqlite3.connect("library.db") as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(myQuery)
+            rows = cur.fetchall()
+            for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
+                print(f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+    print('\n' * 2)
+    print("Select which event you want to register for\n")
+    choice = input('> ')
+    myQuery = '''
+    INSERT INTO Attending (eventID, patronID) VALUES (
+        :event, :patron
+    );
+    '''
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(myQuery, {'event': choice, 'patron': currentPatron})
+            conn.commit()
+            cur.execute("SELECT * FROM Attending WHERE patronID = ?", (currentPatron,))
+            print(cur.fetchall())
+
+        except sqlite3.Error as e:
+                print(f"sqlite encountered error: {e}")
+
+
 def librarian_help():
     myQuery = '''
     SELECT E1.firstName, E1.lastName, E2.email 
@@ -232,8 +309,9 @@ def librarian_help():
     WHERE E1.position = 'Librarian'; 
     '''
     with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
         try:
-            cur = conn.cursor()
+            
             cur.execute(myQuery)
             rows = cur.fetchall()
             for first, last, email in rows:
@@ -307,9 +385,19 @@ def runUI():
             case '3':
                 print("not available yet")
             case '4':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                print("Please select what kind of events you looking for:\n")
+                print(OPTIONS_4)
+                choice = input('> ')
+                find_event(choice)
+                input('press enter to continute...')
+
             case '5':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                register_event(currentPatron)
+                input('press enter to continute...')
             case '6':
                 print("not available yet")
             case '7':
