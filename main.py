@@ -265,6 +265,9 @@ def return_item(loanID: int):
 
 
 # TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
+### MOVE TO A UI FILE ###
+def query_patron_loans(PatronId: int)->[int]:
+
 
 def librarian_help():
     myQuery = '''
