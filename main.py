@@ -204,6 +204,7 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
             if not rows:
                 print("No matching items found")
             else:
+                print("results: itemID, title, authorFirstName, authorLastName, format, isBorrowed, isAdded")
                 for row in rows:
                     print(row)
 
@@ -238,12 +239,7 @@ Ask for help from a librarian
 
 '''
 
-
-def main():
-    # initialize DB if it doesnt already exist
-    if not os.path.exists('library.db'):
-        initialize_db()
-
+def runUI():
     while True:
         print(MENU_OPTIONS)
         choice = input('> ')
@@ -253,7 +249,7 @@ def main():
                 print('\n' * 5)
                 print('-' * 30)
                 print('''Press enter if unknown or you want to skip.
-                    Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
+                Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
 
                 # list to record all of the parameters to feed into function
                 params = []
@@ -292,7 +288,6 @@ def main():
                 librarian_help()
                 input('press enter to continute...')
 
-            
             case 'x':
                 print("Closing application...")
                 break
@@ -324,8 +319,18 @@ def main():
             case _:
                 print(f"You entered {choice}, please enter a valid menu option")
 
-        time.sleep(2)
+        # time.sleep(2)
         print('\n' * 10)
+
+
+
+def main():
+    # initialize DB if it doesnt already exist
+    if not os.path.exists('library.db'):
+        initialize_db()
+
+    runUI()
+
 
 
 if __name__ == "__main__":
