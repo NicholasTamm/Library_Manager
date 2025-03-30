@@ -344,11 +344,10 @@ Ask for help from a librarian
 '''
 
 def runUI():
-
     # check if current user is a patron or just going to volunteer
     # grab the patronID which will be used for operations such as borrowing, returning, etc.
     print('''
-    Welcome to the Local Library!\n
+    Welcome to the Local Library!
     Please enter your PatronId to get full access to library services.\n
     If you are looking to volunteer, donate items, find event, or register as patron, enter 0 to continue
     ''')
@@ -357,7 +356,7 @@ def runUI():
 
     currentPatron = input("> ")
 
-    #TODO: implement current patron usage
+    # TODO: implement current patron usage
 
     while True:
         print(MENU_OPTIONS)
@@ -385,13 +384,51 @@ def runUI():
                 # check for illegal cases
                 if params == [] or all(params == "" for i in params):
                     print("Must enter at least one parameter!")
-                    break
-
-                find_item(*params)
-                input('press enter to continute...')
+                    pass
+                else:
+                    find_item(*params)
+                    input('Returning to main menu..Press enter to return...')
 
             case '2':
-                print("not available yet")
+
+                # ensure user is patron
+                if not cheeckPatronIDValid(int(currentPatron)):
+                    input("Sorry this is a patron only function...Press enter to return...")
+                    pass
+
+                # case 2 functionality
+                else:
+                    print('\n' * 5)
+                    print('-' * 30)
+                    print(f'''
+                    RETURN MENU:\n
+                    Patron: {currentPatron}
+                    ''')
+                    loan_list = query_patron_loans(currentPatron)
+
+                    # if patron has no active loans
+                    if len(loan_list) == 0:
+                        print("You have nothing to return!\n"
+                              "Back to Main Menu...")
+                        input("Press enter to continue...")
+
+                    # patron has active loans
+                    else:
+                        print(f'''{'row':<5}{'loanID':<8}{'itemID':<8}{'dueDate':<20}''')
+                        for i, row in enumerate(loan_list):
+                            print(f"{i + 1:<5}{row[0]:<8}{row[1]:<8}{row[2]:<20}")
+
+                        # ask user which they want to return
+                        print("Enter row number of loan you wish to return:")
+                        toReturn = int(input("> ")) -1
+                        loanID_to_return = loan_list[toReturn][0]
+
+                        # return item
+                        return_item(loanID_to_return)
+                        print("Your item was successfully returned!")
+                        input("Returning to main menu..Press enter to return...")
+
+
             case '3':
                 print("not available yet")
             case '4':
