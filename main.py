@@ -23,6 +23,21 @@ FIND_ITEM_MENU_INPUTS = [
     'format: '
 ]
 
+OPTIONS_4 = '''
+Select your option for the targeted audience:
+
+1. Children
+2. Adults
+3. Seniors
+4. Everyone
+5. All events
+
+'''
+
+OPTIONS_7 = '''
+Please select what kind of assistance you require:
+
+'''
 
 def initialize_db():
     '''
@@ -73,6 +88,14 @@ def initialize_db():
     	position TEXT, 
     	salary INTEGER
     ); 
+    '''
+    create_EmployeeEmail = '''
+
+    CREATE TABLE EmployeeEmail (
+        employeeID INTEGER PRIMARY KEY,
+        email TEXT
+    );
+
     '''
     create_Volunteer = ''' 
     CREATE TABLE Volunteer (
@@ -141,6 +164,7 @@ def initialize_db():
             cur.execute(create_NonFiction)
             cur.execute(create_patron)
             cur.execute(create_Employee)
+            cur.execute(create_EmployeeEmail)
             cur.execute(create_Volunteer)
             cur.execute(create_Event)
             cur.execute(create_Loan)
@@ -152,7 +176,6 @@ def initialize_db():
             print(f"sqlite encountered error: {e}")
 
     # TODO: implement csv reading capabillity
-
 
 def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
               authorLastName: str = "", format: str = ""):
@@ -169,7 +192,7 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
 
     myQuery = '''
     SELECT * 
-    FROM Item I
+    FROM Item I 
     WHERE '''
 
     for i, (attribute, value) in enumerate(filtered_params.items()):
@@ -192,12 +215,109 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
             if not rows:
                 print("No matching items found")
             else:
+                print(f"{'itemID':<8}{'Title':<30}{'Author First Name':<20}{'Author Last Name':<20}{'Format':<10}{'isBorrowed':<12}{'isAdded':<8}")
                 for row in rows:
-                    print(row)
+                    print(f"{row[0]:<8}{row[1]:<30}{row[2]:<20}{row[3]:<20}{row[4]:<10}{row[5]:<12}{row[6]:<8}")
 
+        # debugging purposes
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
+
+def return_item(userPatronID:int):
+    '''
+    Drops row from loan relation. Update corresponding Item record isBorrowed to 0.
+    '''
+
+    # query loans under PatronID
+
+    # ask for input as which
+    pass
+
+# TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
+
+def find_event(recommended):
+    myQuery = '''
+    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time 
+    FROM Event
+    '''
+
+    match recommended:
+        case '1': 
+            myQuery += " WHERE advisedFor = 'Children'"
+        case '2':
+            myQuery += " WHERE advisedFor = 'Adults'"
+        case '3':
+            myQuery += " WHERE advisedFor = 'Seniors'"
+        case '4': 
+            myQuery += " WHERE advisedFor = 'Everyone'"
+        case '5':
+            pass
+        case _:
+            print(f"You entered {recommended}, please enter a valid menu option")
+            return  # exit function early if input is invalid
+
+    with sqlite3.connect("library.db") as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(myQuery)
+            rows = cur.fetchall()
+            for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
+                print(f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+def register_event(currentPatron):
+    myQuery = '''
+    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time 
+    FROM Event
+    '''
+    with sqlite3.connect("library.db") as conn:
+        try:
+            cur = conn.cursor()
+            cur.execute(myQuery)
+            rows = cur.fetchall()
+            for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
+                print(f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+    print('\n' * 2)
+    print("Select which event you want to register for\n")
+    choice = input('> ')
+    myQuery = '''
+    INSERT INTO Attending (eventID, patronID) VALUES (
+        :event, :patron
+    );
+    '''
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(myQuery, {'event': choice, 'patron': currentPatron})
+            conn.commit()
+            cur.execute("SELECT * FROM Attending WHERE patronID = ?", (currentPatron,))
+            print(cur.fetchall())
+
+        except sqlite3.Error as e:
+                print(f"sqlite encountered error: {e}")
+
+
+def librarian_help():
+    myQuery = '''
+    SELECT E1.firstName, E1.lastName, E2.email 
+    FROM Employee E1 JOIN EmployeeEmail E2 ON E1.employeeID = E2.employeeID
+    WHERE E1.position = 'Librarian'; 
+    '''
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            
+            cur.execute(myQuery)
+            rows = cur.fetchall()
+            for first, last, email in rows:
+                print(f"{first} {last} | {email}")
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
 
 # TODO: create DB functions
 '''
@@ -208,14 +328,26 @@ Find an event in the library
 Register for an event in the library
 Volunteer for the library
 Ask for help from a librarian
+    - implement ticketing system
+    - allow user to register as Patron
 
 '''
 
+def runUI():
 
-def main():
-    # initialize DB if it doesnt already exist
-    if not os.path.exists('library.db'):
-        initialize_db()
+    # check if current user is a patron or just going to volunteer
+    # grab the patronID which will be used for operations such as borrowing, returning, etc.
+    print('''
+    Welcome to the Local Library!\n
+    Please enter your PatronId to get full access to library services.\n
+    If you are looking to volunteer, donate items, find event, or register as patron, enter 0 to continue
+    ''')
+    print("\n" * 4)
+    print("PatronID:")
+
+    currentPatron = input("> ")
+
+    #TODO: implement current patron usage
 
     while True:
         print(MENU_OPTIONS)
@@ -226,7 +358,7 @@ def main():
                 print('\n' * 5)
                 print('-' * 30)
                 print('''Press enter if unknown or you want to skip.
-                    Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
+                Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
 
                 # list to record all of the parameters to feed into function
                 params = []
@@ -253,21 +385,71 @@ def main():
             case '3':
                 print("not available yet")
             case '4':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                print("Please select what kind of events you looking for:\n")
+                print(OPTIONS_4)
+                choice = input('> ')
+                find_event(choice)
+                input('press enter to continute...')
+
             case '5':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                register_event(currentPatron)
+                input('press enter to continute...')
             case '6':
                 print("not available yet")
             case '7':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                print("Here are the emails of our Librarians. Please contact them for any inquries.")
+                librarian_help()
+                input('press enter to continute...')
+
             case 'x':
                 print("Closing application...")
                 break
+            case 'p':
+                import sqlite3
+
+                print("Connecting to library.db and printing all table contents...\n")
+
+                with sqlite3.connect("library.db") as conn:
+                    cur = conn.cursor()
+
+                    # Get all user-defined table names
+                    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+                    tables = [row[0] for row in cur.fetchall()]
+
+                    for table in tables:
+                        print(f"\n--- {table} ---")
+                        try:
+                            cur.execute(f"SELECT * FROM {table}")
+                            rows = cur.fetchall()
+                            for row in rows:
+                                print(row)
+                            if not rows:
+                                print("(No rows)")
+                        except sqlite3.Error as e:
+                            print(f"Error reading table {table}: {e}")
+
+                input("\nDone. Press enter to continue...")
             case _:
                 print(f"You entered {choice}, please enter a valid menu option")
 
-        time.sleep(2)
+        # time.sleep(2)
         print('\n' * 10)
+
+
+
+def main():
+    # initialize DB if it doesnt already exist
+    if not os.path.exists('library.db'):
+        initialize_db()
+
+    runUI()
+
 
 
 if __name__ == "__main__":
