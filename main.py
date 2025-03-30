@@ -27,7 +27,7 @@ OPTIONS_7 = '''
 Please select what kind of assistance you require:
 
 '''
-def cheeckPatronIDValid(PatronID: int)->bool:
+def checkPatronIDValid(PatronID: int)->bool:
     myQuery = '''
     SELECT COUNT(*)
     FROM Patron
@@ -349,14 +349,23 @@ def runUI():
     print('''
     Welcome to the Local Library!
     Please enter your PatronId to get full access to library services.\n
-    If you are looking to volunteer, donate items, find event, or register as patron, enter 0 to continue
+    Enter 0 to continue as a guest
     ''')
-    print("\n" * 4)
+    print("\n" * 2)
     print("PatronID:")
 
     currentPatron = input("> ")
+    while not currentPatron.isdigit():
+        print("\n" * 4)
+        print(f"{currentPatron} is INVALID....PatronID must be a number!")
+        print("If you do not have a PatronID, enter 0 to continue as a guest with limited functionality.")
+        print("\n" * 2)
+        print("PatronID:")
 
-    # TODO: implement current patron usage
+        currentPatron = input("> ")
+
+    #confirm that user is a patron
+    isPatron = checkPatronIDValid(int(currentPatron))
 
     while True:
         print(MENU_OPTIONS)
@@ -392,7 +401,7 @@ def runUI():
             case '2':
 
                 # ensure user is patron
-                if not cheeckPatronIDValid(int(currentPatron)):
+                if not isPatron:
                     input("Sorry this is a patron only function...Press enter to return...")
                     pass
 
@@ -448,7 +457,6 @@ def runUI():
                 print("Closing application...")
                 break
             case 'p':
-                import sqlite3
 
                 print("Connecting to library.db and printing all table contents...\n")
 
