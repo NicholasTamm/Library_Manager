@@ -237,14 +237,7 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
         try:
             cur.execute(FindItemQuery)
             rows = cur.fetchall()
-
-            if not rows:
-                print("No matching items found")
-            else:
-                print(f"{'itemID':<8}{'Title':<30}{'Author First Name':<20}{'Author Last Name':<20}"
-                      f"{'Format':<10}{'isBorrowed':<12}{'isAdded':<8}")
-                for row in rows:
-                    print(f"{row[0]:<8}{row[1]:<30}{row[2]:<20}{row[3]:<20}{row[4]:<10}{row[5]:<12}{row[6]:<8}")
+            return rows
 
         # debugging purposes
         except sqlite3.Error as e:
