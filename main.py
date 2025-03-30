@@ -5,13 +5,14 @@ import time
 MENU_OPTIONS = '''
 Select your option:
 
-1 - Borrow an item from the library
-2 - Return a borrowed item
-3 - Donate an item to the library
-4 - Find an event in the library
-5 - Register for an event in the library
-6 - Volunteer for the library
-7 - Ask for help from a librarian
+1 - Find an item in the library
+2 - Borrow an item from the library
+3 - Return a borrowed item
+4 - Donate an item to the library
+5 - Find an event in the library
+6 - Register for an event in the library
+7 - Volunteer for the library
+8 - Ask for help from a librarian
 x - Close application
 '''
 
@@ -27,7 +28,9 @@ OPTIONS_7 = '''
 Please select what kind of assistance you require:
 
 '''
-def checkPatronIDValid(PatronID: int)->bool:
+
+
+def checkPatronIDValid(PatronID: int) -> bool:
     myQuery = '''
     SELECT COUNT(*)
     FROM Patron
@@ -39,8 +42,7 @@ def checkPatronIDValid(PatronID: int)->bool:
             cur.execute(myQuery, (PatronID,))
             rows = cur.fetchall()
 
-
-            match(rows[0][0]):
+            match (rows[0][0]):
                 case 0:
                     print("Not a valid patronID!")
                     return False
@@ -199,6 +201,7 @@ def initialize_db():
 
     # TODO: implement csv reading capabillity
 
+
 def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
               authorLastName: str = "", format: str = ""):
     '''
@@ -238,7 +241,8 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
             if not rows:
                 print("No matching items found")
             else:
-                print(f"{'itemID':<8}{'Title':<30}{'Author First Name':<20}{'Author Last Name':<20}{'Format':<10}{'isBorrowed':<12}{'isAdded':<8}")
+                print(f"{'itemID':<8}{'Title':<30}{'Author First Name':<20}{'Author Last Name':<20}"
+                      f"{'Format':<10}{'isBorrowed':<12}{'isAdded':<8}")
                 for row in rows:
                     print(f"{row[0]:<8}{row[1]:<30}{row[2]:<20}{row[3]:<20}{row[4]:<10}{row[5]:<12}{row[6]:<8}")
 
@@ -297,7 +301,6 @@ def return_item(loanID: int):
 # TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
 ### MOVE TO A UI FILE ###
 def query_patron_loans(PatronId: str):
-
     # query that will be executed
     loanQuery = '''
     SELECT loanID, itemID, dueDate
@@ -311,6 +314,7 @@ def query_patron_loans(PatronId: str):
             return cur.fetchall()
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
+
 
 def librarian_help():
     myQuery = '''
@@ -343,6 +347,7 @@ Ask for help from a librarian
 
 '''
 
+
 def runUI():
     # check if current user is a patron or just going to volunteer
     # grab the patronID which will be used for operations such as borrowing, returning, etc.
@@ -364,7 +369,7 @@ def runUI():
 
         currentPatron = input("> ")
 
-    #confirm that user is a patron
+    # confirm that user is a patron
     isPatron = checkPatronIDValid(int(currentPatron))
 
     while True:
@@ -397,8 +402,10 @@ def runUI():
                 else:
                     find_item(*params)
                     input('Returning to main menu..Press enter to return...')
-
             case '2':
+                print("not available yet")
+
+            case '3':
 
                 # ensure user is patron
                 if not isPatron:
@@ -429,7 +436,7 @@ def runUI():
 
                         # ask user which they want to return
                         print("Enter row number of loan you wish to return:")
-                        toReturn = int(input("> ")) -1
+                        toReturn = int(input("> ")) - 1
                         loanID_to_return = loan_list[toReturn][0]
 
                         # return item
@@ -437,9 +444,6 @@ def runUI():
                         print("Your item was successfully returned!")
                         input("Returning to main menu..Press enter to return...")
 
-
-            case '3':
-                print("not available yet")
             case '4':
                 print("not available yet")
             case '5':
@@ -447,6 +451,8 @@ def runUI():
             case '6':
                 print("not available yet")
             case '7':
+                print("not available yet")
+            case '8':
                 print('\n' * 5)
                 print('-' * 30)
                 print("Here are the emails of our Librarians. Please contact them for any inquries.")
@@ -487,14 +493,12 @@ def runUI():
         print('\n' * 10)
 
 
-
 def main():
     # initialize DB if it doesnt already exist
     if not os.path.exists('library.db'):
         initialize_db()
 
     runUI()
-
 
 
 if __name__ == "__main__":
