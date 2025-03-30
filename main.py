@@ -179,7 +179,7 @@ def initialize_db():
             cur.execute(create_Item)
             cur.execute(create_Fiction)
             cur.execute(create_NonFiction)
-            cur.execute(create_patron)
+            cur.execute(create_Patron)
             cur.execute(create_Employee)
             cur.execute(create_EmployeeEmail)
             cur.execute(create_Volunteer)
