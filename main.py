@@ -39,19 +39,24 @@ def cheeckPatronIDValid(PatronID: int)->bool:
             cur.execute(myQuery, (PatronID,))
             rows = cur.fetchall()
 
-            match(len(rows)):
+
+            match(rows[0][0]):
                 case 0:
+                    print("Not a valid patronID!")
                     return False
                 case 1:
+                    print("valid id")
                     return True
                 case _:
                     for row in rows:
                         print(row)
                     print("more than one PatronID!")
+                    return False
 
 
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
+            exit(1)
 
 
 def initialize_db():
