@@ -28,7 +28,27 @@ OPTIONS_7 = '''
 Please select what kind of assistance you require:
 
 '''
+def printTable(rows,params=None):
+    '''
+    Used in order to print header and query results in a Pandas Dataframe like format.
+    '''
+    if not rows:
+        print("No matching items found")
+    else:
 
+        # get the longest with possible in each coulmn
+        column_widths = [len(str(row[0])) for row in rows]
+        for row in rows:
+            for i in range(len(row)):
+                column_widths[i] = max(column_widths[i], len(str(row[i])))
+
+        # if given a header then print it out
+        if params:
+            print("".join([f"{params[i]:<{column_widths[i] + 8}}" for i in range(len(params))]))
+
+        # print each row
+        for row in rows:
+            print("".join([f"{row[i]:<{column_widths[i] + 8}}" for i in range(len(row))]))
 
 def checkPatronIDValid(PatronID: int) -> bool:
     myQuery = '''
@@ -393,7 +413,10 @@ def runUI():
                     print("Must enter at least one parameter!")
                     pass
                 else:
-                    find_item(*params)
+                    itemsRows = find_item(*params)
+                    printTable(itemsRows, ['itemID', 'Title', 'Author First Name', 'Author Last Name',
+                                           'Format', 'isBorrowed', 'isAdded'])
+
                     input('Returning to main menu..Press enter to return...')
             case '2':
                 print("not available yet")
