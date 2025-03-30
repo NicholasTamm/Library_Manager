@@ -1,6 +1,7 @@
 import os.path
 import sqlite3
 import time
+from datetime import date, timedelta
 
 MENU_OPTIONS = '''
 Select your option:
@@ -314,9 +315,30 @@ def return_item(loanID: int):
             print(f"sqlite encountered error: {e}")
 
 
-def borrow_item(itemID: str = "", title: str = "", authorFirstName: str = "",
-              authorLastName: str = "", format: str = ""):
-    pass
+def borrow_item(itemID: str, patronID: str):
+
+    borrowQuery = '''
+    UPDATE Item
+    SET isBorrowed = 1
+    WHERE itemID = ?'''
+
+    loanQuery = '''
+    INSERT INTO Loan (itemID, patronID, dueDate, isReturned)
+    VALUES (?, ?, ?, 0)'''
+
+    duedate = date.today() + timedelta(days=14)
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(borrowQuery, (itemID,))
+            cur.execute(loanQuery, (itemID, patronID, duedate.strftime("%Y-%m-%d")))
+            conn.commit()
+
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
 
 
 ### MOVE TO A UI FILE ###
@@ -400,8 +422,9 @@ def runUI():
             case '1':
                 print('\n' * 5)
                 print('-' * 30)
-                print('''Press enter if unknown or you want to skip.
-                Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
+                print("FIND AN ITEM:"
+                      "Press enter if unknown or you want to skip."
+                        "Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.")
 
                 # list to record all of the parameters to feed into function
                 params = []
@@ -421,12 +444,56 @@ def runUI():
                     pass
                 else:
                     itemsRows = find_item(*params)
-                    printTable(itemsRows, ['itemID', 'Title', 'Author First Name', 'Author Last Name',
+                    if itemsRows:
+                        printTable(itemsRows, ['itemID', 'Title', 'Author First Name', 'Author Last Name',
                                            'Format', 'isBorrowed', 'isAdded'])
-
+                    else:
+                        print("\n"* 5 + "No items found!")
                     input('Returning to main menu..Press enter to return...')
             case '2':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                print("BORROW AN ITEM:"
+                      "Press enter if unknown or you want to skip."
+                      "Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.")
+
+                # list to record all of the parameters to feed into function
+                params = []
+
+                for option in FIND_ITEM_MENU_INPUTS:
+                    # print out each filter option and get the input
+                    print(option)
+                    find_input = input("> ")
+                    # if the input is x break the loop
+                    if find_input.lower() == 'x':
+                        break
+                    params.append(find_input)
+
+                # check for illegal cases
+                if params == [] or all(params == "" for i in params):
+                    print("Must enter at least one parameter!")
+                    pass
+                else:
+                    itemsRows = find_item(*params)
+                    if itemsRows:
+                        printTable(itemsRows, ['itemID', 'Title', 'Author First Name', 'Author Last Name',
+                                               'Format', 'isBorrowed', 'isAdded'])
+
+                        # ask user which they want to Borrow
+                        print("Enter row number of item you wish to Borrow:")
+                        print("Enter 'X' to abort")
+                        toBorrow = int(input("> "))
+                        if toBorrow.is_integer() and toBorrow in range(len(itemsRows)):
+                            itemID_to_Borrow = itemsRows[toBorrow][0]
+                            borrow_item(itemID_to_Borrow, currentPatron)
+                            print("Your item was successfully borrowed!")
+                        elif toBorrow == 'x':
+                            pass
+                        else:
+                            print("Invalid input! Number either not INT or out of range.")
+                    else:
+                        print("\n"* 5 + "No items found!")
+                    input("Returning to main menu..Press enter to return...")
 
             case '3':
 
@@ -435,7 +502,7 @@ def runUI():
                     input("Sorry this is a patron only function...Press enter to return...")
                     pass
 
-                # case 2 functionality
+                # case 3 functionality
                 else:
                     print('\n' * 5)
                     print('-' * 30)
@@ -457,12 +524,18 @@ def runUI():
 
                         # ask user which they want to return
                         print("Enter row number of loan you wish to return:")
-                        toReturn = int(input("> ")) - 1
-                        loanID_to_return = loan_list[toReturn][0]
+                        print("Enter 'X' to abort")
+                        toReturn = int(input("> "))
+                        if toReturn.is_integer() and toReturn in range(len(loan_list)):
+                            loanID_to_return = loan_list[toReturn][0]
 
-                        # return item
-                        return_item(loanID_to_return)
-                        print("Your item was successfully returned!")
+                            # return item
+                            return_item(loanID_to_return)
+                            print("Your item was successfully returned!")
+                        elif toReturn == 'x':
+                            pass
+                        else:
+                            print("Invalid input! Number either not INT or out of range.")
                         input("Returning to main menu..Press enter to return...")
 
             case '4':
