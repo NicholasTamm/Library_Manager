@@ -289,13 +289,23 @@ def return_item(loanID: int):
             print(f"sqlite encountered error: {e}")
 
 
-
-
-
 # TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
 ### MOVE TO A UI FILE ###
-def query_patron_loans(PatronId: int)->[int]:
+def query_patron_loans(PatronId: str):
 
+    # query that will be executed
+    loanQuery = '''
+    SELECT loanID, itemID, dueDate
+    FROM Loan
+    WHERE patronID = ? AND isReturned  = 0'''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(loanQuery, (PatronId,))
+            return cur.fetchall()
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
 
 def librarian_help():
     myQuery = '''
@@ -312,6 +322,7 @@ def librarian_help():
                 print(f"{first} {last} | {email}")
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
+
 
 # TODO: create DB functions
 '''
