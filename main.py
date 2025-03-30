@@ -238,7 +238,7 @@ def initialize_db():
 
 
 def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
-              authorLastName: str = "", format: str = ""):
+              authorLastName: str = "", format: str = "", isBorrowed: int = ""):
     '''
     Find an item in the library
     '''
@@ -554,25 +554,27 @@ def runUI():
                     print("Must enter at least one parameter!")
                     pass
                 else:
-                    itemsRows = find_item(*params)
+                    itemsRows = find_item(*params, isBorrowed=0)
                     if itemsRows:
                         printTable(itemsRows, ['itemID', 'Title', 'Author First Name', 'Author Last Name',
                                                'Format', 'isBorrowed', 'isAdded'])
 
                         # ask user which they want to Borrow
+                        print("\n"* 2)
                         print("Enter row number of item you wish to Borrow:")
                         print("Enter 'X' to abort")
-                        toBorrow = int(input("> "))
-                        if toBorrow.is_integer() and toBorrow in range(len(itemsRows)):
-                            itemID_to_Borrow = itemsRows[toBorrow][0]
-                            borrow_item(itemID_to_Borrow, currentPatron)
-                            print("Your item was successfully borrowed!")
-                        elif toBorrow == 'x':
+                        toBorrow = input("> ")
+                        if toBorrow.isdigit():
+                            if int(toBorrow) in range(len(itemsRows)):
+                                itemID_to_Borrow = itemsRows[int(toBorrow)][0]
+                                borrow_item(itemID_to_Borrow, currentPatron)
+                                print("Your item was successfully borrowed!")
+                        elif toBorrow.lower() == 'x':
                             pass
                         else:
                             print("Invalid input! Number either not INT or out of range.")
                     else:
-                        print("\n"* 5 + "No items found!")
+                        print("\n"* 5 + "No items found! Please ensure book is not borrowed already!")
                     input("Returning to main menu..Press enter to return...")
 
             case '3':
@@ -603,16 +605,18 @@ def runUI():
                         printTable(loan_list,['loanID', 'itemID', 'dueDate'])
 
                         # ask user which they want to return
+                        print("\n" * 2)
                         print("Enter row number of loan you wish to return:")
                         print("Enter 'X' to abort")
-                        toReturn = int(input("> "))
-                        if toReturn.is_integer() and toReturn in range(len(loan_list)):
-                            loanID_to_return = loan_list[toReturn][0]
+                        toReturn = input("> ")
+                        if toReturn.isdigit():
+                            if int(toReturn) in range(len(loan_list)):
+                                loanID_to_return = loan_list[int(toReturn)][0]
 
-                            # return item
-                            return_item(loanID_to_return)
-                            print("Your item was successfully returned!")
-                        elif toReturn == 'x':
+                                # return item
+                                return_item(loanID_to_return)
+                                print("Your item was successfully returned!")
+                        elif toReturn.lower() == 'x':
                             pass
                         else:
                             print("Invalid input! Number either not INT or out of range.")
