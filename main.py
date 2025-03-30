@@ -37,18 +37,21 @@ def printTable(rows,params=None):
     else:
 
         # get the longest with possible in each coulmn
-        column_widths = [len(str(row[0])) for row in rows]
+        column_widths = [len(param) for param in params]
+
         for row in rows:
             for i in range(len(row)):
                 column_widths[i] = max(column_widths[i], len(str(row[i])))
 
         # if given a header then print it out
         if params:
-            print("".join([f"{params[i]:<{column_widths[i] + 8}}" for i in range(len(params))]))
+            header = "".join([f"{params[i]:<{column_widths[i] + 8}}" for i in range(len(params))])
+            print(f"{'row':<5}" + header)
 
         # print each row
-        for row in rows:
-            print("".join([f"{row[i]:<{column_widths[i] + 8}}" for i in range(len(row))]))
+        for i,row in enumerate(rows):
+            rowContent = "".join([f"{row[i]:<{column_widths[i] + 8}}" for i in range(len(row))])
+            print(f"{i:<5}" + rowContent)
 
 def checkPatronIDValid(PatronID: int) -> bool:
     myQuery = '''
@@ -250,7 +253,7 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
         else:
             FindItemQuery += f"{attribute}='{value}'"
 
-    print(FindItemQuery)
+
     ### TODO: test the execution of the query
     with sqlite3.connect("library.db") as conn:
         cur = conn.cursor()
@@ -311,7 +314,11 @@ def return_item(loanID: int):
             print(f"sqlite encountered error: {e}")
 
 
-# TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
+def borrow_item(itemID: str = "", title: str = "", authorFirstName: str = "",
+              authorLastName: str = "", format: str = ""):
+    pass
+
+
 ### MOVE TO A UI FILE ###
 def query_patron_loans(PatronId: str):
     # query that will be executed
@@ -446,9 +453,7 @@ def runUI():
 
                     # patron has active loans
                     else:
-                        print(f'''{'row':<5}{'loanID':<8}{'itemID':<8}{'dueDate':<20}''')
-                        for i, row in enumerate(loan_list):
-                            print(f"{i + 1:<5}{row[0]:<8}{row[1]:<8}{row[2]:<20}")
+                        printTable(loan_list,['loanID', 'itemID', 'dueDate'])
 
                         # ask user which they want to return
                         print("Enter row number of loan you wish to return:")
