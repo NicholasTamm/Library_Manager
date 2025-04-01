@@ -395,10 +395,84 @@ def DB_add_item(title: str = "", authorFirstName: str = "",
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
+def check_volunteer(volunteerID): 
+    idQuery = '''
+    SELECT COUNT(*)
+    FROM Volunteer
+    WHERE volunteerID = ?
+    '''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(idQuery, (volunteerID,))
+            rows = cur.fetchall()
+
+            match (rows[0][0]):
+                case 0:
+                    print("Not a valid volunteerID!")
+                    return False
+                case 1:
+                    print("valid id")
+                    return True
+                case _:
+                    for row in rows:
+                        print(row)
+                    print("more than one volunteerID!")
+                    return False
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
+
+def check_event(eventID):
+    idQuery = '''
+    SELECT COUNT(*)
+    FROM Volunteer
+    WHERE volunteerID = ?
+    '''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(idQuery, (eventID,))
+            rows = cur.fetchall()
+
+            match (rows[0][0]):
+                case 0:
+                    print("Not a valid event!")
+                    return False
+                case 1:
+                    return True
+                case _:
+                    for row in rows:
+                        print(row)
+                    print("More than one event selected. Please only choose 1.")
+                    return False
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
+
+def volunteer_event(eventID, volunteerID):
+    myQuery = '''
+        INSERT INTO Event_Volunteer (eventID, volunteerID) VALUES
+        (:event, :volunteer)
+    '''
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(myQuery, {'event': eventID, 'volunteer': volunteerID})
+            conn.commit()
+            cur.execute("SELECT * FROM Event_Volunteer WHERE volunteerID = ?", (volunteerID,))
+            print(cur.fetchall())
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
 
 def find_event(recommended):
     myQuery = '''
-    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time 
+    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time
     FROM Event
     '''
 
@@ -729,7 +803,18 @@ def runUI():
                     register_event(currentPatron)
                 input('press enter to continue...')
             case '7':
-                print("not available yet")
+                print("Please enter your volunteerID\n")
+                volunteerID = input("> ")
+                
+                if check_volunteer(volunteerID):
+                    find_event('5')
+                    print('\n')
+                    print("Please select what event you would like to volunteer for:\n")
+                    eventID = input('> ')
+                    if check_event(eventID):
+                       volunteer_event(eventID, volunteerID)
+
+                input('press enter to continute...')
             case '8':
                 print('\n' * 5)
                 print('-' * 30)
