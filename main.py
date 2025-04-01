@@ -550,7 +550,7 @@ def runUI():
                 userInput = get_user_item_input()
                 itemsRows = []
 
-                # check for illegal cases
+                # check for illegal cases else call query
                 if userInput == [] or all(entry == "" for entry in userInput):
                     print("Must enter at least one parameter!")
                 elif 'p' in userInput:
@@ -630,7 +630,13 @@ def runUI():
                     input("Returning to main menu..Press enter to return...")
 
             case '4':
-                print(OPTION_INTRO.format("DONATE A BOOK: "))
+                print_function_intro("DONATE AN ITEM:")
+                donate_inputs = get_user_item_input(ForPrinting=False)
+                if donate_inputs == [] or all(entry == "" for entry in donate_inputs):
+                    print("Must enter at least one parameter!")
+                else:
+                    DB_add_item(*donate_inputs)
+
 
             case '5':
                 print('\n' * 5)
