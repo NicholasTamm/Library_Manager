@@ -414,9 +414,11 @@ def find_event(recommended):
             cur = conn.cursor()
             cur.execute(myQuery)
             rows = cur.fetchall()
-            for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
-                print(
-                    f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+
+            printTable(rows, ['eventID', 'eventName', 'type', 'advisedFor', 'roomNumber', 'date', 'time'])
+            # for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
+            #     print(
+            #         f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
@@ -431,9 +433,11 @@ def register_event(currentPatron):
             cur = conn.cursor()
             cur.execute(myQuery)
             rows = cur.fetchall()
-            for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
-                print(
-                    f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+            printTable(rows, ['eventID', 'eventName', 'type', 'advisedFor', 'roomNumber', 'date', 'time'])
+
+            # for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
+            #     print(
+            #         f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
@@ -488,6 +492,98 @@ Ask for help from a librarian
     - allow user to register as Patron
 
 '''
+def find_item():
+    # list to record all of the parameters to feed into function
+    userInput = get_user_item_input()
+    itemsRows = []
+
+    # check for illegal cases
+    if userInput == [] or all(entry == "" for entry in userInput):
+        print("Must enter at least one parameter!")
+        pass
+    elif 'p' in userInput:
+        itemsRows = DB_find_item()
+    else:
+        itemsRows = DB_find_item(*userInput)
+
+    # if there are items to print then print them out
+    if itemsRows:
+        printTable(itemsRows, itemsAttributes)
+    else:
+        print("\n" * 5 + "No items found!")
+    input('Returning to main menu..Press enter to return...')
+
+
+def borrow_item():
+    # list to record all of the parameters to feed into function
+    userInput = get_user_item_input()
+    itemsRows = []
+
+    # check for illegal cases else call query
+    if userInput == [] or all(entry == "" for entry in userInput):
+        print("Must enter at least one parameter!")
+    elif 'p' in userInput:
+        itemsRows = DB_find_item(isBorrowed=0)
+    else:
+        itemsRows = DB_find_item(*userInput, isBorrowed=0, isAdded=1)
+
+    # print items if there are
+    if itemsRows:
+        printTable(itemsRows, itemsAttributes)
+
+        # ask user which they want to Borrow
+        print("Enter row number of item you wish to Borrow:")
+        print("Enter 'X' to abort")
+        while True:
+            inputToBorrow = input("> ")
+            if inputToBorrow.isdigit():
+                if int(inputToBorrow) in range(len(itemsRows)):
+                    itemID_to_Borrow = itemsRows[int(inputToBorrow)][0]
+                    DB_borrow_item(itemID_to_Borrow, currentPatron)
+                    print("Your item was successfully borrowed!")
+                    break
+                else:
+                    printTable(itemsRows, itemsAttributes)
+                    print("Enter row number of item you wish to Borrow:")
+                    print("Enter 'X' to abort")
+                    print("\nINVALID INPUT! ROW NOT IN RANGE")
+            elif inputToBorrow.lower() == 'x':
+                break
+            else:
+                print("Invalid input! Must be a number or 'X' to abort.")
+    else:
+        print("\n" * 5 + "No items found! Please ensure book is not borrowed already!")
+    input("Returning to main menu..Press enter to return...")
+
+def return_item():
+    loan_list = query_patron_loans(currentPatron)
+
+    # if patron has no active loans
+    if len(loan_list) == 0:
+        print("You have nothing to return!\n"
+              "Back to Main Menu...")
+        input("Press enter to continue...")
+
+    # patron has active loans
+    else:
+        printTable(loan_list, ['loanID', 'itemID', 'dueDate'])
+
+        # ask user which they want to return
+        print("Enter row number of loan you wish to return:")
+        print("Enter 'X' to abort")
+        toReturn = input("> ")
+        if toReturn.isdigit():
+            if int(toReturn) in range(len(loan_list)):
+                loanID_to_return = loan_list[int(toReturn)][0]
+
+                # return item
+                DB_return_item(loanID_to_return)
+                print("Your item was successfully returned!")
+        elif toReturn.lower() == 'x':
+            pass
+        else:
+            print("Invalid input! Number either not INT or out of range.")
+        input("Returning to main menu..Press enter to return...")
 
 
 def runUI():
@@ -516,26 +612,8 @@ def runUI():
             case '1':
                 print_function_intro("FIND AN ITEM:")
                 print("Enter 'p' into any filter to print entire items catalogue\n")
+                find_item()
 
-                # list to record all of the parameters to feed into function
-                userInput = get_user_item_input()
-                itemsRows = []
-
-                # check for illegal cases
-                if userInput == [] or all(entry == "" for entry in userInput):
-                    print("Must enter at least one parameter!")
-                    pass
-                elif 'p' in userInput:
-                    itemsRows = DB_find_item()
-                else:
-                    itemsRows = DB_find_item(*userInput)
-
-                # if there are items to print then print them out
-                if itemsRows:
-                    printTable(itemsRows, itemsAttributes)
-                else:
-                    print("\n" * 5 + "No items found!")
-                input('Returning to main menu..Press enter to return...')
 
             case '2':
                 # ensure user is a patron
@@ -545,46 +623,7 @@ def runUI():
 
                 print_function_intro("BORROW AN ITEM:")
                 print("Enter 'p' at any filter to see all available items\n")
-
-                # list to record all of the parameters to feed into function
-                userInput = get_user_item_input()
-                itemsRows = []
-
-                # check for illegal cases else call query
-                if userInput == [] or all(entry == "" for entry in userInput):
-                    print("Must enter at least one parameter!")
-                elif 'p' in userInput:
-                    itemsRows = DB_find_item(isBorrowed=0)
-                else:
-                    itemsRows = DB_find_item(*userInput, isBorrowed=0, isAdded=1)
-
-                # print items if there are
-                if itemsRows:
-                    printTable(itemsRows, itemsAttributes)
-
-                    # ask user which they want to Borrow
-                    print("Enter row number of item you wish to Borrow:")
-                    print("Enter 'X' to abort")
-                    while True:
-                        inputToBorrow = input("> ")
-                        if inputToBorrow.isdigit():
-                            if int(inputToBorrow) in range(len(itemsRows)):
-                                itemID_to_Borrow = itemsRows[int(inputToBorrow)][0]
-                                DB_borrow_item(itemID_to_Borrow, currentPatron)
-                                print("Your item was successfully borrowed!")
-                                break
-                            else:
-                                printTable(itemsRows, itemsAttributes)
-                                print("Enter row number of item you wish to Borrow:")
-                                print("Enter 'X' to abort")
-                                print("\nINVALID INPUT! ROW NOT IN RANGE")
-                        elif inputToBorrow.lower() == 'x':
-                            break
-                        else:
-                            print("Invalid input! Must be a number or 'X' to abort.")
-                else:
-                    print("\n" * 5 + "No items found! Please ensure book is not borrowed already!")
-                input("Returning to main menu..Press enter to return...")
+                borrow_item()
 
             case '3':
 
@@ -600,34 +639,8 @@ def runUI():
                     RETURN MENU:\n
                     Patron: {currentPatron}
                     ''')
-                loan_list = query_patron_loans(currentPatron)
+                return_item()
 
-                # if patron has no active loans
-                if len(loan_list) == 0:
-                    print("You have nothing to return!\n"
-                          "Back to Main Menu...")
-                    input("Press enter to continue...")
-
-                # patron has active loans
-                else:
-                    printTable(loan_list, ['loanID', 'itemID', 'dueDate'])
-
-                    # ask user which they want to return
-                    print("Enter row number of loan you wish to return:")
-                    print("Enter 'X' to abort")
-                    toReturn = input("> ")
-                    if toReturn.isdigit():
-                        if int(toReturn) in range(len(loan_list)):
-                            loanID_to_return = loan_list[int(toReturn)][0]
-
-                            # return item
-                            DB_return_item(loanID_to_return)
-                            print("Your item was successfully returned!")
-                    elif toReturn.lower() == 'x':
-                        pass
-                    else:
-                        print("Invalid input! Number either not INT or out of range.")
-                    input("Returning to main menu..Press enter to return...")
 
             case '4':
                 print_function_intro("DONATE AN ITEM:")
