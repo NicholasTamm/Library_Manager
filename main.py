@@ -1,29 +1,24 @@
 import os.path
 import sqlite3
 import time
+from datetime import date, timedelta
+from UI_utilities import printTable, print_welcome, get_user_item_input, print_function_intro
 
 MENU_OPTIONS = '''
 Select your option:
 
-1 - Borrow an item from the library
-2 - Return a borrowed item
-3 - Donate an item to the library
-4 - Find an event in the library
-5 - Register for an event in the library
-6 - Volunteer for the library
-7 - Ask for help from a librarian
+1 - Find an item in the library
+2 - Borrow an item from the library
+3 - Return a borrowed item
+4 - Donate an item to the library
+5 - Find an event in the library
+6 - Register for an event in the library
+7 - Volunteer for the library
+8 - Ask for help from a librarian
 x - Close application
 '''
 
-FIND_ITEM_MENU_INPUTS = [
-    'ItemID: ',
-    'Title: ',
-    'author\'s first name: ',
-    'author\'s last name: ',
-    'format: '
-]
-
-OPTIONS_4 = '''
+OPTIONS_5 = '''
 Select your option for the targeted audience:
 
 1. Children
@@ -34,12 +29,66 @@ Select your option for the targeted audience:
 
 '''
 
-OPTIONS_7 = '''
+OPTIONS_8 = '''
 Please select what kind of assistance you require:
 
 '''
 
-def initialize_db():
+itemsAttributes = ['itemID', 'Title', 'Author First Name', 'Author Last Name', 'Format', 'F_NF', 'CallNumber',
+                   'Status', 'Availability']
+
+
+def checkPatronIDValid(PatronID: int) -> bool:
+    myQuery = '''
+    SELECT COUNT(*)
+    FROM Patron
+    WHERE patronID = ?'''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(myQuery, (PatronID,))
+            rows = cur.fetchall()
+
+            match (rows[0][0]):
+                case 0:
+                    print("Not a valid patronID!")
+                    return False
+                case 1:
+                    print("valid id")
+                    return True
+                case _:
+                    for row in rows:
+                        print(row)
+                    print("more than one PatronID!")
+                    return False
+
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
+
+
+def query_patron_loans(PatronId: str):
+    '''
+    helper function to query the loan table under the current patronID logged in to the system.
+    '''
+    # query that will be executed
+    loanQuery = '''
+    SELECT loanID, itemID, dueDate
+    FROM Loan
+    WHERE patronID = ? AND isReturned  = 0'''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(loanQuery, (PatronId,))
+            return cur.fetchall()
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+
+def DB_initialize():
     '''
     - takes in a connection and creates all tables
     - should read in data from a csv file
@@ -73,7 +122,7 @@ def initialize_db():
 	    FOREIGN KEY(itemID) REFERENCES Item(itemID) ON DELETE CASCADE
     );
     '''
-    create_patron = ''' 
+    create_Patron = ''' 
     CREATE TABLE Patron (
     	patronID INTEGER PRIMARY KEY AUTOINCREMENT,
     	firstName TEXT CHECK (LENGTH(firstName) <= 50), 
@@ -121,9 +170,11 @@ def initialize_db():
     CREATE TABLE Loan (
         loanID INTEGER PRIMARY KEY AUTOINCREMENT, 
         itemID INTEGER NOT NULL, 
+        patronID INTEGER NOT NULL,
         dueDate DATE NOT NULL, 
         isReturned INTEGER CHECK (isReturned in (0, 1)), 
-        FOREIGN KEY (itemID) REFERENCES Item(ItemID) 
+        FOREIGN KEY (itemID) REFERENCES Item(itemID),
+        FOREIGN KEY (patronID) REFERENCES Patron(patronID)
     ); 
     '''
     create_Fine = ''' 
@@ -162,7 +213,7 @@ def initialize_db():
             cur.execute(create_Item)
             cur.execute(create_Fiction)
             cur.execute(create_NonFiction)
-            cur.execute(create_patron)
+            cur.execute(create_Patron)
             cur.execute(create_Employee)
             cur.execute(create_EmployeeEmail)
             cur.execute(create_Volunteer)
@@ -177,8 +228,9 @@ def initialize_db():
 
     # TODO: implement csv reading capabillity
 
-def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
-              authorLastName: str = "", format: str = ""):
+
+def DB_find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
+                 authorLastName: str = "", format: str = "", isBorrowed: int = "", isAdded: int = ""):
     '''
     Find an item in the library
     '''
@@ -190,51 +242,151 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
     # attributes = list(filtered_params.keys())
     # values = list(filtered_params.values())
 
-    myQuery = '''
-    SELECT * 
-    FROM Item I 
-    WHERE '''
+    FindItemQuery = '''
+    SELECT 
+        I.itemID,
+        I.title,
+        I.authorFirstName,
+        I.authorLastName,
+        I.format,
+        CASE 
+            WHEN F.itemID IS NOT NULL THEN 'Fiction'
+            WHEN NF.itemID IS NOT NULL THEN 'NonFiction'
+            ELSE ''
+        END AS F_NF,
+        CASE
+            WHEN F.cutter IS NOT NULL THEN F.cutter
+            WHEN NF.cutter IS NOT NULL THEN NF.callNum || ' ' || NF.cutter
+            ELSE ''
+        END AS CallNumber,
+        CASE
+            WHEN I.isBorrowed = 1 THEN 'Borrowed'
+            WHEN I.isBorrowed = 0 THEN 'Available'
+            ELSE ''
+        END AS currentStatus,
+        CASE
+            WHEN I.isAdded = 1 THEN 'In Catalogue'
+            WHEN I.isAdded = 0 THEN 'To be Added'
+            ELSE ''
+        END AS Availability
+    FROM Item I
+    LEFT JOIN Fiction F ON I.itemID = F.itemID
+    LEFT JOIN NonFiction NF ON I.itemID = NF.itemID
+    '''
+
+    # if there are parameters
+    if filtered_params:
+        FindItemQuery += ' WHERE '
 
     for i, (attribute, value) in enumerate(filtered_params.items()):
         if i > 0:
-            myQuery += " AND "
+            FindItemQuery += " AND "
 
         if attribute == "itemID":
-            myQuery += f"{attribute}={value}"
+            FindItemQuery += f"I.{attribute}={value}"
         else:
-            myQuery += f"{attribute}='{value}'"
+            FindItemQuery += f"{attribute}='{value}'"
 
-    print(myQuery)
     ### TODO: test the execution of the query
     with sqlite3.connect("library.db") as conn:
         cur = conn.cursor()
         try:
-            cur.execute(myQuery)
+            cur.execute(FindItemQuery)
             rows = cur.fetchall()
-
-            if not rows:
-                print("No matching items found")
-            else:
-                print(f"{'itemID':<8}{'Title':<30}{'Author First Name':<20}{'Author Last Name':<20}{'Format':<10}{'isBorrowed':<12}{'isAdded':<8}")
-                for row in rows:
-                    print(f"{row[0]:<8}{row[1]:<30}{row[2]:<20}{row[3]:<20}{row[4]:<10}{row[5]:<12}{row[6]:<8}")
+            return rows
 
         # debugging purposes
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
 
-def return_item(userPatronID:int):
+def DB_return_item(loanID: int):
     '''
     Drops row from loan relation. Update corresponding Item record isBorrowed to 0.
+
     '''
 
-    # query loans under PatronID
+    # query strings
+    loanQuery = '''
+    Select itemID
+    FROM Loan
+    WHERE loanID = ?
+    '''
 
-    # ask for input as which
-    pass
+    UpdateItemQuery = '''
+    UPDATE Item
+    SET isBorrowed = 0
+    WHERE itemID = ?
+    '''
 
-# TODO: Helper func: takes in a userPatronID and lists all the loans currently under Patron. Asks which one they want to return.
+    UpdateLoanQuery = '''
+    UPDATE Loan
+    SET isReturned = 1
+    WHERE loanID = ? AND itemID = ?
+    '''
+
+    # open connections
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            # find the desired loan
+            cur.execute(loanQuery, (loanID,))
+            rows = cur.fetchall()
+
+            # shouldn't be possible but for debug purpose
+            if len(rows) != 1:
+                print("ERROR ENCOUNTER MORE THAN ONE ITEM WITH CORRESPONDING ITEMID")
+            else:
+                itemID = rows[0][0]
+                cur.execute(UpdateItemQuery, (itemID,))
+                cur.execute(UpdateLoanQuery, (loanID, itemID))
+                conn.commit()
+
+        # debugging purposes
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+
+def DB_borrow_item(itemID: str, patronID: str):
+    borrowQuery = '''
+    UPDATE Item
+    SET isBorrowed = 1
+    WHERE itemID = ?'''
+
+    loanQuery = '''
+    INSERT INTO Loan (itemID, patronID, dueDate, isReturned)
+    VALUES (?, ?, ?, 0)'''
+
+    duedate = date.today() + timedelta(days=14)
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(borrowQuery, (itemID,))
+            cur.execute(loanQuery, (itemID, patronID, duedate.strftime("%Y-%m-%d")))
+            conn.commit()
+
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
+
+
+def DB_add_item(title: str = "", authorFirstName: str = "",
+                authorLastName: str = "", format: str = ""):
+    # query
+    insertQuery = '''
+    INSERT INTO item (title, authorFirstName, authorLastName, format, isBorrowed, isAdded)
+    VALUES (?, ?, ?, ?, 0, 0)'''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(insertQuery, (title, authorFirstName, authorLastName, format))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
 
 def find_event(recommended):
     myQuery = '''
@@ -243,13 +395,13 @@ def find_event(recommended):
     '''
 
     match recommended:
-        case '1': 
+        case '1':
             myQuery += " WHERE advisedFor = 'Children'"
         case '2':
             myQuery += " WHERE advisedFor = 'Adults'"
         case '3':
             myQuery += " WHERE advisedFor = 'Seniors'"
-        case '4': 
+        case '4':
             myQuery += " WHERE advisedFor = 'Everyone'"
         case '5':
             pass
@@ -263,9 +415,11 @@ def find_event(recommended):
             cur.execute(myQuery)
             rows = cur.fetchall()
             for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
-                print(f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+                print(
+                    f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
+
 
 def register_event(currentPatron):
     myQuery = '''
@@ -278,7 +432,8 @@ def register_event(currentPatron):
             cur.execute(myQuery)
             rows = cur.fetchall()
             for eventID, eventName, type, advisedFor, roomNumber, date, time in rows:
-                print(f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
+                print(
+                    f"{eventID}. {eventName} | {type} | Recommended audience: {advisedFor} | Room {roomNumber} | {date} {time}")
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
@@ -299,7 +454,7 @@ def register_event(currentPatron):
             print(cur.fetchall())
 
         except sqlite3.Error as e:
-                print(f"sqlite encountered error: {e}")
+            print(f"sqlite encountered error: {e}")
 
 
 def librarian_help():
@@ -311,13 +466,14 @@ def librarian_help():
     with sqlite3.connect("library.db") as conn:
         cur = conn.cursor()
         try:
-            
+
             cur.execute(myQuery)
             rows = cur.fetchall()
             for first, last, email in rows:
                 print(f"{first} {last} | {email}")
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
+
 
 # TODO: create DB functions
 '''
@@ -333,21 +489,24 @@ Ask for help from a librarian
 
 '''
 
-def runUI():
 
+def runUI():
     # check if current user is a patron or just going to volunteer
     # grab the patronID which will be used for operations such as borrowing, returning, etc.
-    print('''
-    Welcome to the Local Library!\n
-    Please enter your PatronId to get full access to library services.\n
-    If you are looking to volunteer, donate items, find event, or register as patron, enter 0 to continue
-    ''')
-    print("\n" * 4)
-    print("PatronID:")
+    print_welcome()
 
     currentPatron = input("> ")
+    while not currentPatron.isdigit():
+        print("\n" * 4)
+        print(f"{currentPatron} is INVALID....PatronID must be a number!")
+        print("If you do not have a PatronID, enter 0 to continue as a guest with limited functionality.")
+        print("\n" * 2)
+        print("PatronID:")
 
-    #TODO: implement current patron usage
+        currentPatron = input("> ")
+
+    # confirm that user is a patron
+    isPatron = checkPatronIDValid(int(currentPatron))
 
     while True:
         print(MENU_OPTIONS)
@@ -355,63 +514,156 @@ def runUI():
 
         match choice.lower():
             case '1':
-                print('\n' * 5)
-                print('-' * 30)
-                print('''Press enter if unknown or you want to skip.
-                Enter "x" to skip the current and rest of the prompts (cannot use on itemID).''')
+                print_function_intro("FIND AN ITEM:")
+                print("Enter 'p' into any filter to print entire items catalogue\n")
 
                 # list to record all of the parameters to feed into function
-                params = []
-
-                for option in FIND_ITEM_MENU_INPUTS:
-                    # print out each filter option and get the input
-                    print(option)
-                    find_input = input("> ")
-                    # if the input is x break the loop
-                    if find_input.lower() == 'x':
-                        break
-                    params.append(find_input)
+                userInput = get_user_item_input()
+                itemsRows = []
 
                 # check for illegal cases
-                if params == [] or all(params == "" for i in params):
+                if userInput == [] or all(entry == "" for entry in userInput):
                     print("Must enter at least one parameter!")
-                    break
+                    pass
+                elif 'p' in userInput:
+                    itemsRows = DB_find_item()
+                else:
+                    itemsRows = DB_find_item(*userInput)
 
-                find_item(*params)
-                input('press enter to continute...')
+                # if there are items to print then print them out
+                if itemsRows:
+                    printTable(itemsRows, itemsAttributes)
+                else:
+                    print("\n" * 5 + "No items found!")
+                input('Returning to main menu..Press enter to return...')
 
             case '2':
-                print("not available yet")
+                # ensure user is a patron
+                if not isPatron:
+                    input("Sorry this is a patron only function...Press enter to return...")
+                    continue
+
+                print_function_intro("BORROW AN ITEM:")
+                print("Enter 'p' at any filter to see all available items\n")
+
+                # list to record all of the parameters to feed into function
+                userInput = get_user_item_input()
+                itemsRows = []
+
+                # check for illegal cases else call query
+                if userInput == [] or all(entry == "" for entry in userInput):
+                    print("Must enter at least one parameter!")
+                elif 'p' in userInput:
+                    itemsRows = DB_find_item(isBorrowed=0)
+                else:
+                    itemsRows = DB_find_item(*userInput, isBorrowed=0, isAdded=1)
+
+                # print items if there are
+                if itemsRows:
+                    printTable(itemsRows, itemsAttributes)
+
+                    # ask user which they want to Borrow
+                    print("Enter row number of item you wish to Borrow:")
+                    print("Enter 'X' to abort")
+                    while True:
+                        inputToBorrow = input("> ")
+                        if inputToBorrow.isdigit():
+                            if int(inputToBorrow) in range(len(itemsRows)):
+                                itemID_to_Borrow = itemsRows[int(inputToBorrow)][0]
+                                DB_borrow_item(itemID_to_Borrow, currentPatron)
+                                print("Your item was successfully borrowed!")
+                                break
+                            else:
+                                printTable(itemsRows, itemsAttributes)
+                                print("Enter row number of item you wish to Borrow:")
+                                print("Enter 'X' to abort")
+                                print("\nINVALID INPUT! ROW NOT IN RANGE")
+                        elif inputToBorrow.lower() == 'x':
+                            break
+                        else:
+                            print("Invalid input! Must be a number or 'X' to abort.")
+                else:
+                    print("\n" * 5 + "No items found! Please ensure book is not borrowed already!")
+                input("Returning to main menu..Press enter to return...")
+
             case '3':
-                print("not available yet")
-            case '4':
+
+                # ensure user is patron
+                if not isPatron:
+                    input("Sorry this is a patron only function...Press enter to return...")
+                    continue
+
+                # case 3 functionality
                 print('\n' * 5)
                 print('-' * 30)
-                print("Please select what kind of events you looking for:\n")
-                print(OPTIONS_4)
-                choice = input('> ')
-                find_event(choice)
-                input('press enter to continute...')
+                print(f'''
+                    RETURN MENU:\n
+                    Patron: {currentPatron}
+                    ''')
+                loan_list = query_patron_loans(currentPatron)
+
+                # if patron has no active loans
+                if len(loan_list) == 0:
+                    print("You have nothing to return!\n"
+                          "Back to Main Menu...")
+                    input("Press enter to continue...")
+
+                # patron has active loans
+                else:
+                    printTable(loan_list, ['loanID', 'itemID', 'dueDate'])
+
+                    # ask user which they want to return
+                    print("Enter row number of loan you wish to return:")
+                    print("Enter 'X' to abort")
+                    toReturn = input("> ")
+                    if toReturn.isdigit():
+                        if int(toReturn) in range(len(loan_list)):
+                            loanID_to_return = loan_list[int(toReturn)][0]
+
+                            # return item
+                            DB_return_item(loanID_to_return)
+                            print("Your item was successfully returned!")
+                    elif toReturn.lower() == 'x':
+                        pass
+                    else:
+                        print("Invalid input! Number either not INT or out of range.")
+                    input("Returning to main menu..Press enter to return...")
+
+            case '4':
+                print_function_intro("DONATE AN ITEM:")
+                donate_inputs = get_user_item_input(ForPrinting=False)
+                if donate_inputs == [] or all(entry == "" for entry in donate_inputs):
+                    print("Must enter at least one parameter!")
+                else:
+                    DB_add_item(*donate_inputs)
+
 
             case '5':
                 print('\n' * 5)
                 print('-' * 30)
-                register_event(currentPatron)
-                input('press enter to continute...')
+                print("Please select what kind of events you looking for:\n")
+                print(OPTIONS_5)
+                choice = input('> ')
+                find_event(choice)
+                input('press enter to continue...')
             case '6':
-                print("not available yet")
+                print('\n' * 5)
+                print('-' * 30)
+                register_event(currentPatron)
+                input('press enter to continue...')
             case '7':
+                print("not available yet")
+            case '8':
                 print('\n' * 5)
                 print('-' * 30)
                 print("Here are the emails of our Librarians. Please contact them for any inquries.")
                 librarian_help()
-                input('press enter to continute...')
+                input('press enter to continue...')
 
             case 'x':
                 print("Closing application...")
                 break
             case 'p':
-                import sqlite3
 
                 print("Connecting to library.db and printing all table contents...\n")
 
@@ -436,20 +688,18 @@ def runUI():
 
                 input("\nDone. Press enter to continue...")
             case _:
-                print(f"You entered {choice}, please enter a valid menu option")
+                print(f"You entered {choice}, please enter a valid number corresponding to a menu option")
 
-        # time.sleep(2)
+        # time.sleep(1)
         print('\n' * 10)
-
 
 
 def main():
     # initialize DB if it doesnt already exist
     if not os.path.exists('library.db'):
-        initialize_db()
+        DB_initialize()
 
     runUI()
-
 
 
 if __name__ == "__main__":
