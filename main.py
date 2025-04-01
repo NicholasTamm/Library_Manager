@@ -2,17 +2,12 @@ import os.path
 import sqlite3
 import time
 from datetime import date, timedelta
-import UI_utilities as myUI
-
-
+from UI_utilities import printTable, print_welcome, get_user_item_input
 
 OPTION_INTRO = '''
 {}
 Press enter if unknown or you want to skip.
-Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.)"
-'''
-
-
+Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.)'''
 
 MENU_OPTIONS = '''
 Select your option:
@@ -27,14 +22,6 @@ Select your option:
 8 - Ask for help from a librarian
 x - Close application
 '''
-
-FIND_ITEM_MENU_INPUTS = [
-    'ItemID: ',
-    'Title: ',
-    'author\'s first name: ',
-    'author\'s last name: ',
-    'format: '
-]
 
 OPTIONS_5 = '''
 Select your option for the targeted audience:
@@ -53,6 +40,7 @@ Please select what kind of assistance you require:
 '''
 
 itemsAttributes = ['itemID', 'Title', 'Author First Name', 'Author Last Name', 'Format', 'isBorrowed', 'isAdded']
+
 
 def checkPatronIDValid(PatronID: int) -> bool:
     myQuery = '''
@@ -83,6 +71,7 @@ def checkPatronIDValid(PatronID: int) -> bool:
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
             exit(1)
+
 
 def query_patron_loans(PatronId: str):
     '''
@@ -245,7 +234,7 @@ def DB_initialize():
 
 
 def DB_find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
-              authorLastName: str = "", format: str = "", isBorrowed: int = ""):
+                 authorLastName: str = "", format: str = "", isBorrowed: int = ""):
     '''
     Find an item in the library
     '''
@@ -263,6 +252,12 @@ def DB_find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
     WHERE 
     '''
 
+    # special if function called with no params print all
+    if not filtered_params:
+        FindItemQuery = '''
+        SELECT *
+        FROM Item'''
+
     for i, (attribute, value) in enumerate(filtered_params.items()):
         if i > 0:
             FindItemQuery += " AND "
@@ -271,7 +266,6 @@ def DB_find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
             FindItemQuery += f"{attribute}={value}"
         else:
             FindItemQuery += f"{attribute}='{value}'"
-
 
     ### TODO: test the execution of the query
     with sqlite3.connect("library.db") as conn:
@@ -334,7 +328,6 @@ def DB_return_item(loanID: int):
 
 
 def DB_borrow_item(itemID: str, patronID: str):
-
     borrowQuery = '''
     UPDATE Item
     SET isBorrowed = 1
@@ -358,8 +351,9 @@ def DB_borrow_item(itemID: str, patronID: str):
             print(f"sqlite encountered error: {e}")
             exit(1)
 
+
 def DB_add_item(title: str = "", authorFirstName: str = "",
-              authorLastName: str = "", format: str = ""):
+                authorLastName: str = "", format: str = ""):
     # query
     insertQuery = '''
     INSERT INTO item (title, authorFirstName, authorLastName, format, isBorrowed, isAdded)
@@ -372,8 +366,6 @@ def DB_add_item(title: str = "", authorFirstName: str = "",
             conn.commit()
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
-
-
 
 
 def find_event(recommended):
@@ -462,6 +454,7 @@ def librarian_help():
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
+
 # TODO: create DB functions
 '''
 Borrow an item from the library
@@ -480,7 +473,7 @@ Ask for help from a librarian
 def runUI():
     # check if current user is a patron or just going to volunteer
     # grab the patronID which will be used for operations such as borrowing, returning, etc.
-    myUI.print_welcome()
+    print_welcome()
 
     currentPatron = input("> ")
     while not currentPatron.isdigit():
@@ -499,85 +492,70 @@ def runUI():
         print(MENU_OPTIONS)
         choice = input('> ')
 
-
         match choice.lower():
             case '1':
                 print('\n' * 5)
                 print('-' * 30)
 
                 print(OPTION_INTRO.format("FIND AN ITEM: "))
+                print("Enter 'p' into any to print entire items catalogue")
 
                 # list to record all of the parameters to feed into function
-                params = []
-
-                for option in FIND_ITEM_MENU_INPUTS:
-                    # print out each filter option and get the input
-                    print(option)
-                    find_input = input("> ")
-                    # if the input is x break the loop
-                    if find_input.lower() == 'x':
-                        break
-                    params.append(find_input)
+                userInput = get_user_item_input()
+                itemsRows = []
 
                 # check for illegal cases
-                if params == [] or all(params == "" for i in params):
+                if userInput == [] or all(entry == "" for entry in userInput):
                     print("Must enter at least one parameter!")
                     pass
+                elif 'p' in userInput:
+                    itemsRows = DB_find_item()
                 else:
-                    itemsRows = DB_find_item(*params)
-                    if itemsRows:
-                        myUI.printTable(itemsRows, itemsAttributes)
-                    else:
-                        print("\n"* 5 + "No items found!")
-                    input('Returning to main menu..Press enter to return...')
+                    itemsRows = DB_find_item(*userInput)
+
+                if itemsRows:
+                    printTable(itemsRows, itemsAttributes)
+                else:
+                    print("\n" * 5 + "No items found!")
+                input('Returning to main menu..Press enter to return...')
             case '2':
                 print('\n' * 5)
                 print('-' * 30)
                 print(OPTION_INTRO.format(" BORROW AN ITEM: "))
 
                 # list to record all of the parameters to feed into function
-                params = []
-
-                for option in FIND_ITEM_MENU_INPUTS:
-                    # print out each filter option and get the input
-                    print(option)
-                    find_input = input("> ")
-                    # if the input is x break the loop
-                    if find_input.lower() == 'x':
-                        break
-                    params.append(find_input)
+                userInput = get_user_item_input()
 
                 # check for illegal cases
-                if params == [] or all(params == "" for i in params):
+                if userInput == [] or all(entry == "" for entry in userInput):
                     print("Must enter at least one parameter!")
-                    pass
                 else:
-                    itemsRows = DB_find_item(*params, isBorrowed=0)
+                    itemsRows = DB_find_item(*userInput, isBorrowed=0)
                     if itemsRows:
-                        myUI.printTable(itemsRows, itemsAttributes)
+                        printTable(itemsRows, itemsAttributes)
 
                         # ask user which they want to Borrow
-                        print("\n"* 2)
+                        print("\n" * 2)
                         print("Enter row number of item you wish to Borrow:")
                         print("Enter 'X' to abort")
                         while True:
-                            toBorrow = input("> ")
-                            if toBorrow.isdigit():
-                                if int(toBorrow) in range(len(itemsRows)):
-                                    itemID_to_Borrow = itemsRows[int(toBorrow)][0]
+                            inputToBorrow = input("> ")
+                            if inputToBorrow.isdigit():
+                                if int(inputToBorrow) in range(len(itemsRows)):
+                                    itemID_to_Borrow = itemsRows[int(inputToBorrow)][0]
                                     DB_borrow_item(itemID_to_Borrow, currentPatron)
                                     print("Your item was successfully borrowed!")
                                     break
                                 else:
-                                    myUI.printTable(itemsRows, itemsAttributes)
+                                    printTable(itemsRows, itemsAttributes)
                                     print("Enter 'X' to abort")
                                     print("Invalid input! row not in range.")
-                            elif toBorrow.lower() == 'x':
+                            elif inputToBorrow.lower() == 'x':
                                 break
                             else:
                                 print("Invalid input! Must be a number or 'X' to abort.")
                     else:
-                        print("\n"* 5 + "No items found! Please ensure book is not borrowed already!")
+                        print("\n" * 5 + "No items found! Please ensure book is not borrowed already!")
                     input("Returning to main menu..Press enter to return...")
 
             case '3':
@@ -605,7 +583,7 @@ def runUI():
 
                     # patron has active loans
                     else:
-                        myUI.printTable(loan_list, ['loanID', 'itemID', 'dueDate'])
+                        printTable(loan_list, ['loanID', 'itemID', 'dueDate'])
 
                         # ask user which they want to return
                         print("\n" * 2)
@@ -626,7 +604,8 @@ def runUI():
                         input("Returning to main menu..Press enter to return...")
 
             case '4':
-                print("not available yet")
+                print(OPTION_INTRO.format("DONATE A BOOK: "))
+
             case '5':
                 print('\n' * 5)
                 print('-' * 30)
@@ -681,9 +660,6 @@ def runUI():
 
         # time.sleep(1)
         print('\n' * 10)
-
-
-
 
 
 def main():

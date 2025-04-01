@@ -1,3 +1,13 @@
+
+FIND_ITEM_MENU_INPUTS = [
+    'ItemID: ',
+    'Title: ',
+    'author\'s first name: ',
+    'author\'s last name: ',
+    'format: '
+]
+
+
 ### MOVE TO A myUI FILE ###
 def printTable(rows,params=None):
     '''
@@ -38,3 +48,20 @@ def print_welcome():
     ''')
     print("\n" * 2)
     print("PatronID:")
+
+
+def get_user_item_input()->list:
+    params = []
+    for option in FIND_ITEM_MENU_INPUTS:
+        # print out each filter option and get the input
+        print(option)
+        find_input = input("> ")
+        # if the input is x break the loop
+        if find_input.lower() == 'x':
+            break
+        elif find_input.lower() == 'p':
+            params.append('p')
+            break
+        params.append(find_input)
+
+    return params
