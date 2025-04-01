@@ -358,7 +358,12 @@ def DB_borrow_item(itemID: str, patronID: str):
             print(f"sqlite encountered error: {e}")
             exit(1)
 
-
+def DB_add_item(title: str = "", authorFirstName: str = "",
+              authorLastName: str = "", format: str = "", isBorrowed: int = ""):
+    # query
+    insertQuery = '''
+    INSERT INTO item (title, authorFirstName, authorLastName, format, isBorrowed, isAdded)
+    VALUES (?, ?, ?, ?, 0, 0)'''
 
 
 
