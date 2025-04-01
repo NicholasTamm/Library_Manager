@@ -511,10 +511,9 @@ def find_item():
         printTable(itemsRows, itemsAttributes)
     else:
         print("\n" * 5 + "No items found!")
-    input('Returning to main menu..Press enter to return...')
 
 
-def borrow_item():
+def borrow_item(currentPatron: str):
     # list to record all of the parameters to feed into function
     userInput = get_user_item_input()
     itemsRows = []
@@ -553,9 +552,9 @@ def borrow_item():
                 print("Invalid input! Must be a number or 'X' to abort.")
     else:
         print("\n" * 5 + "No items found! Please ensure book is not borrowed already!")
-    input("Returning to main menu..Press enter to return...")
 
-def return_item():
+
+def return_item(currentPatron: str):
     loan_list = query_patron_loans(currentPatron)
 
     # if patron has no active loans
@@ -583,7 +582,6 @@ def return_item():
             pass
         else:
             print("Invalid input! Number either not INT or out of range.")
-        input("Returning to main menu..Press enter to return...")
 
 
 def runUI():
@@ -613,6 +611,7 @@ def runUI():
                 print_function_intro("FIND AN ITEM:")
                 print("Enter 'p' into any filter to print entire items catalogue\n")
                 find_item()
+                input("Returning to main menu..Press enter to return...")
 
 
             case '2':
@@ -623,7 +622,8 @@ def runUI():
 
                 print_function_intro("BORROW AN ITEM:")
                 print("Enter 'p' at any filter to see all available items\n")
-                borrow_item()
+                borrow_item(currentPatron=currentPatron)
+                input("Returning to main menu..Press enter to return...")
 
             case '3':
 
@@ -639,7 +639,8 @@ def runUI():
                     RETURN MENU:\n
                     Patron: {currentPatron}
                     ''')
-                return_item()
+                return_item(currentPatron=currentPatron)
+                input("Returning to main menu..Press enter to return...")
 
 
             case '4':
