@@ -9,7 +9,7 @@ import UI_utilities as myUI
 OPTION_INTRO = '''
 {}
 Press enter if unknown or you want to skip.
-Enter 'x' to skip the current and rest of the prompts (cannot use on itemID."
+Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.)"
 '''
 
 
@@ -364,6 +364,14 @@ def DB_add_item(title: str = "", authorFirstName: str = "",
     insertQuery = '''
     INSERT INTO item (title, authorFirstName, authorLastName, format, isBorrowed, isAdded)
     VALUES (?, ?, ?, ?, 0, 0)'''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(insertQuery, (title, authorFirstName, authorLastName, format))
+            conn.commit()
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
 
 
 
