@@ -359,7 +359,7 @@ def DB_borrow_item(itemID: str, patronID: str):
             exit(1)
 
 def DB_add_item(title: str = "", authorFirstName: str = "",
-              authorLastName: str = "", format: str = "", isBorrowed: int = ""):
+              authorLastName: str = "", format: str = ""):
     # query
     insertQuery = '''
     INSERT INTO item (title, authorFirstName, authorLastName, format, isBorrowed, isAdded)
