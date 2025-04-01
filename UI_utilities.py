@@ -7,6 +7,12 @@ FIND_ITEM_MENU_INPUTS = [
     'format: '
 ]
 
+OPTION_INTRO = '''
+{}
+Press enter if unknown or you want to skip.
+Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.)'''
+
+
 
 ### MOVE TO A myUI FILE ###
 def printTable(rows,params=None):
@@ -38,7 +44,7 @@ def printTable(rows,params=None):
             rowContent = "".join([f"{row[i]:<{column_widths[i] + 8}}" for i in range(len(row))])
             print(f"{i:<5}" + rowContent)
 
-    print("\n" * 2)
+        print("\n")
 
 def print_welcome():
     print('''
@@ -50,7 +56,7 @@ def print_welcome():
     print("PatronID:")
 
 
-def get_user_item_input()->list:
+def get_user_item_input(ForPrinting=True)->list:
     params = []
     for option in FIND_ITEM_MENU_INPUTS:
         # print out each filter option and get the input
@@ -59,9 +65,14 @@ def get_user_item_input()->list:
         # if the input is x break the loop
         if find_input.lower() == 'x':
             break
-        elif find_input.lower() == 'p':
+        elif find_input.lower() == 'p' and ForPrinting:
             params.append('p')
             break
         params.append(find_input)
 
     return params
+
+def print_function_intro(title:str):
+    print('\n' * 5)
+    print('-' * 30)
+    print(OPTION_INTRO.format(title))

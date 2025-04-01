@@ -2,12 +2,7 @@ import os.path
 import sqlite3
 import time
 from datetime import date, timedelta
-from UI_utilities import printTable, print_welcome, get_user_item_input
-
-OPTION_INTRO = '''
-{}
-Press enter if unknown or you want to skip.
-Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.)'''
+from UI_utilities import printTable, print_welcome, get_user_item_input, print_function_intro
 
 MENU_OPTIONS = '''
 Select your option:
