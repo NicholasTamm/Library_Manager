@@ -2,6 +2,17 @@ import os.path
 import sqlite3
 import time
 from datetime import date, timedelta
+import UI_utilities as myUI
+
+
+
+OPTION_INTRO = '''
+{}
+Press enter if unknown or you want to skip.
+Enter 'x' to skip the current and rest of the prompts (cannot use on itemID."
+'''
+
+
 
 MENU_OPTIONS = '''
 Select your option:
@@ -40,30 +51,8 @@ OPTIONS_8 = '''
 Please select what kind of assistance you require:
 
 '''
-def printTable(rows,params=None):
-    '''
-    Used in order to print header and query results in a Pandas Dataframe like format.
-    '''
-    if not rows:
-        print("No matching items found")
-    else:
 
-        # get the longest with possible in each coulmn
-        column_widths = [len(param) for param in params]
-
-        for row in rows:
-            for i in range(len(row)):
-                column_widths[i] = max(column_widths[i], len(str(row[i])))
-
-        # if given a header then print it out
-        if params:
-            header = "".join([f"{params[i]:<{column_widths[i] + 8}}" for i in range(len(params))])
-            print(f"{'row':<5}" + header)
-
-        # print each row
-        for i,row in enumerate(rows):
-            rowContent = "".join([f"{row[i]:<{column_widths[i] + 8}}" for i in range(len(row))])
-            print(f"{i:<5}" + rowContent)
+itemsAttributes = ['itemID', 'Title', 'Author First Name', 'Author Last Name', 'Format', 'isBorrowed', 'isAdded']
 
 def checkPatronIDValid(PatronID: int) -> bool:
     myQuery = '''
@@ -95,8 +84,26 @@ def checkPatronIDValid(PatronID: int) -> bool:
             print(f"sqlite encountered error: {e}")
             exit(1)
 
+def query_patron_loans(PatronId: str):
+    '''
+    helper function to query the loan table under the current patronID logged in to the system.
+    '''
+    # query that will be executed
+    loanQuery = '''
+    SELECT loanID, itemID, dueDate
+    FROM Loan
+    WHERE patronID = ? AND isReturned  = 0'''
 
-def initialize_db():
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(loanQuery, (PatronId,))
+            return cur.fetchall()
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+
+def DB_initialize():
     '''
     - takes in a connection and creates all tables
     - should read in data from a csv file
@@ -237,7 +244,7 @@ def initialize_db():
     # TODO: implement csv reading capabillity
 
 
-def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
+def DB_find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
               authorLastName: str = "", format: str = "", isBorrowed: int = ""):
     '''
     Find an item in the library
@@ -279,7 +286,7 @@ def find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
             print(f"sqlite encountered error: {e}")
 
 
-def return_item(loanID: int):
+def DB_return_item(loanID: int):
     '''
     Drops row from loan relation. Update corresponding Item record isBorrowed to 0.
 
@@ -326,7 +333,7 @@ def return_item(loanID: int):
             print(f"sqlite encountered error: {e}")
 
 
-def borrow_item(itemID: str, patronID: str):
+def DB_borrow_item(itemID: str, patronID: str):
 
     borrowQuery = '''
     UPDATE Item
@@ -352,21 +359,8 @@ def borrow_item(itemID: str, patronID: str):
             exit(1)
 
 
-### MOVE TO A UI FILE ###
-def query_patron_loans(PatronId: str):
-    # query that will be executed
-    loanQuery = '''
-    SELECT loanID, itemID, dueDate
-    FROM Loan
-    WHERE patronID = ? AND isReturned  = 0'''
 
-    with sqlite3.connect("library.db") as conn:
-        cur = conn.cursor()
-        try:
-            cur.execute(loanQuery, (PatronId,))
-            return cur.fetchall()
-        except sqlite3.Error as e:
-            print(f"sqlite encountered error: {e}")
+
 
 
 def find_event(recommended):
@@ -473,13 +467,7 @@ Ask for help from a librarian
 def runUI():
     # check if current user is a patron or just going to volunteer
     # grab the patronID which will be used for operations such as borrowing, returning, etc.
-    print('''
-    Welcome to the Local Library!
-    Please enter your PatronId to get full access to library services.\n
-    Enter 0 to continue as a guest
-    ''')
-    print("\n" * 2)
-    print("PatronID:")
+    myUI.print_welcome()
 
     currentPatron = input("> ")
     while not currentPatron.isdigit():
@@ -498,13 +486,13 @@ def runUI():
         print(MENU_OPTIONS)
         choice = input('> ')
 
+
         match choice.lower():
             case '1':
                 print('\n' * 5)
                 print('-' * 30)
-                print("FIND AN ITEM:"
-                      "Press enter if unknown or you want to skip."
-                        "Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.")
+
+                print(OPTION_INTRO.format("FIND AN ITEM: "))
 
                 # list to record all of the parameters to feed into function
                 params = []
@@ -523,19 +511,16 @@ def runUI():
                     print("Must enter at least one parameter!")
                     pass
                 else:
-                    itemsRows = find_item(*params)
+                    itemsRows = DB_find_item(*params)
                     if itemsRows:
-                        printTable(itemsRows, ['itemID', 'Title', 'Author First Name', 'Author Last Name',
-                                           'Format', 'isBorrowed', 'isAdded'])
+                        myUI.printTable(itemsRows, itemsAttributes)
                     else:
                         print("\n"* 5 + "No items found!")
                     input('Returning to main menu..Press enter to return...')
             case '2':
                 print('\n' * 5)
                 print('-' * 30)
-                print("BORROW AN ITEM:"
-                      "Press enter if unknown or you want to skip."
-                      "Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.")
+                print(OPTION_INTRO.format(" BORROW AN ITEM: "))
 
                 # list to record all of the parameters to feed into function
                 params = []
@@ -554,25 +539,30 @@ def runUI():
                     print("Must enter at least one parameter!")
                     pass
                 else:
-                    itemsRows = find_item(*params, isBorrowed=0)
+                    itemsRows = DB_find_item(*params, isBorrowed=0)
                     if itemsRows:
-                        printTable(itemsRows, ['itemID', 'Title', 'Author First Name', 'Author Last Name',
-                                               'Format', 'isBorrowed', 'isAdded'])
+                        myUI.printTable(itemsRows, itemsAttributes)
 
                         # ask user which they want to Borrow
                         print("\n"* 2)
                         print("Enter row number of item you wish to Borrow:")
                         print("Enter 'X' to abort")
-                        toBorrow = input("> ")
-                        if toBorrow.isdigit():
-                            if int(toBorrow) in range(len(itemsRows)):
-                                itemID_to_Borrow = itemsRows[int(toBorrow)][0]
-                                borrow_item(itemID_to_Borrow, currentPatron)
-                                print("Your item was successfully borrowed!")
-                        elif toBorrow.lower() == 'x':
-                            pass
-                        else:
-                            print("Invalid input! Number either not INT or out of range.")
+                        while True:
+                            toBorrow = input("> ")
+                            if toBorrow.isdigit():
+                                if int(toBorrow) in range(len(itemsRows)):
+                                    itemID_to_Borrow = itemsRows[int(toBorrow)][0]
+                                    DB_borrow_item(itemID_to_Borrow, currentPatron)
+                                    print("Your item was successfully borrowed!")
+                                    break
+                                else:
+                                    myUI.printTable(itemsRows, itemsAttributes)
+                                    print("Enter 'X' to abort")
+                                    print("Invalid input! row not in range.")
+                            elif toBorrow.lower() == 'x':
+                                break
+                            else:
+                                print("Invalid input! Must be a number or 'X' to abort.")
                     else:
                         print("\n"* 5 + "No items found! Please ensure book is not borrowed already!")
                     input("Returning to main menu..Press enter to return...")
@@ -602,7 +592,7 @@ def runUI():
 
                     # patron has active loans
                     else:
-                        printTable(loan_list,['loanID', 'itemID', 'dueDate'])
+                        myUI.printTable(loan_list, ['loanID', 'itemID', 'dueDate'])
 
                         # ask user which they want to return
                         print("\n" * 2)
@@ -614,7 +604,7 @@ def runUI():
                                 loanID_to_return = loan_list[int(toReturn)][0]
 
                                 # return item
-                                return_item(loanID_to_return)
+                                DB_return_item(loanID_to_return)
                                 print("Your item was successfully returned!")
                         elif toReturn.lower() == 'x':
                             pass
@@ -674,16 +664,19 @@ def runUI():
 
                 input("\nDone. Press enter to continue...")
             case _:
-                print(f"You entered {choice}, please enter a valid menu option")
+                print(f"You entered {choice}, please enter a valid number corresponding to a menu option")
 
-        # time.sleep(2)
+        # time.sleep(1)
         print('\n' * 10)
+
+
+
 
 
 def main():
     # initialize DB if it doesnt already exist
     if not os.path.exists('library.db'):
-        initialize_db()
+        DB_initialize()
 
     runUI()
 
