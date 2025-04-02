@@ -735,7 +735,7 @@ def runUI():
                 print('-' * 30)
 
                 if not isPatron:
-                    register_quest_as_patron()
+                    register_guest_as_patron()
                 else:
                     print("Here are the emails of our Librarians. Please contact them for any inquries.")
                     librarian_help()
