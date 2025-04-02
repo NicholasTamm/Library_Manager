@@ -583,6 +583,48 @@ def return_item(currentPatron: str):
         else:
             print("Invalid input! Number either not INT or out of range.")
 
+def register_quest_as_patron():
+
+    patronAddQuery = '''
+    INSERT INTO Patron (firstName, lastName)
+    VALUES (?,?)
+    '''
+
+    queryNewPatron = '''
+    SELECT *
+    FROM Patron
+    WHERE firstName = ? AND lastName = ?
+    '''
+    
+    names = ["",""]
+
+    while not all(name.isalpha() for name in names):
+        print("Enter your First Name:")
+        names[0] = input("> ")
+        print("Enter your Last Name:")
+        names[1] = input("> ")
+
+    names = [name.lower().strip() for name in names]
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(patronAddQuery, names)
+            conn.commit()
+            print("\n" * 2)
+            print("Successfully registered Patron! Welcome to the Library!")
+            cur.execute(queryNewPatron, names)
+            rows = cur.fetchall()
+            if rows:
+                printTable(rows, ["PatronID", "First Name", "Last Name"])
+            else:
+                print("Error: No Patrons found with those names! Did not register Patron properly!")
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
+    
+    
+    
 
 def runUI():
     # check if current user is a patron or just going to volunteer
@@ -663,15 +705,23 @@ def runUI():
             case '6':
                 print('\n' * 5)
                 print('-' * 30)
-                register_event(currentPatron)
+                if not isPatron:
+                    print("Sorry this is a patron only function...Press enter to return...")
+                    continue
+                else:
+                    register_event(currentPatron)
                 input('press enter to continue...')
             case '7':
                 print("not available yet")
             case '8':
                 print('\n' * 5)
                 print('-' * 30)
-                print("Here are the emails of our Librarians. Please contact them for any inquries.")
-                librarian_help()
+
+                if not isPatron:
+                    register_quest_as_patron()
+                else:
+                    print("Here are the emails of our Librarians. Please contact them for any inquries.")
+                    librarian_help()
                 input('press enter to continue...')
 
             case 'x':
