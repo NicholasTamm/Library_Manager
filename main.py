@@ -75,8 +75,16 @@ def query_patron_loans(PatronId: str):
     '''
     # query that will be executed
     loanQuery = '''
-    SELECT loanID, itemID, dueDate
-    FROM Loan
+    SELECT 
+        L.loanID, 
+        L.itemID, 
+        L.dueDate,
+        I.title,
+        I.authorFirstName,
+        I.authorLastName,
+        I.format
+    FROM Loan L
+    LEFT JOIN Item I ON L.itemID = I.itemID
     WHERE patronID = ? AND isReturned  = 0'''
 
     with sqlite3.connect("library.db") as conn:
@@ -565,7 +573,7 @@ def return_item(currentPatron: str):
 
     # patron has active loans
     else:
-        printTable(loan_list, ['loanID', 'itemID', 'dueDate'])
+        printTable(loan_list, ['loanID', 'itemID', 'dueDate','title','authorFirstName','authorLastName','format'])
 
         # ask user which they want to return
         print("Enter row number of loan you wish to return:")
