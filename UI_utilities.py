@@ -51,6 +51,7 @@ def print_welcome():
     Welcome to the Local Library!
     Please enter your PatronId to get full access to library services.\n
     Enter 0 to continue as a guest
+    A GUEST MAY REGISTER TO BECOME A PATRON THROUGH LIBRARIAN ( OPTION 8)
     ''')
     print("\n" * 2)
     print("PatronID:")
