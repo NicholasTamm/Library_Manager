@@ -583,7 +583,7 @@ def return_item(currentPatron: str):
         else:
             print("Invalid input! Number either not INT or out of range.")
 
-def register_quest_as_patron():
+def register_guest_as_patron():
 
     patronAddQuery = '''
     INSERT INTO Patron (firstName, lastName)
