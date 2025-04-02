@@ -156,9 +156,10 @@ def DB_initialize():
     '''
     create_Volunteer = ''' 
     CREATE TABLE Volunteer (
-        volunteerID INTEGER PRIMARY KEY AUTOINCREMENT, 
+        volunteerID INTEGER PRIMARY KEY, 
         firstName TEXT CHECK (LENGTH(firstName) <= 50),
-        lastName TEXT CHECK (LENGTH(lastName) <= 100)
+        lastName TEXT CHECK (LENGTH(lastName) <= 100),
+        FOREIGN KEY(volunteerID) REFERENCES Patron(patronID) ON DELETE CASCADE
     );
     '''
     create_Event = ''' 
@@ -394,6 +395,19 @@ def DB_add_item(title: str = "", authorFirstName: str = "",
             conn.commit()
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
+
+def add_volunteer(volunteerID):
+    idQuery = '''
+    INSERT INTO Volunteer(volunteerID, firstName, LastName)
+    SELECT patronID, firstName, lastName FROM Patron
+    WHERE patronID = ?
+    '''
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try: cur.execute(idQuery, (volunteerID,))
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
 
 def check_volunteer(volunteerID): 
     idQuery = '''
@@ -803,16 +817,19 @@ def runUI():
                     register_event(currentPatron)
                 input('press enter to continue...')
             case '7':
-                print("Please enter your volunteerID\n")
-                volunteerID = input("> ")
                 
-                if check_volunteer(volunteerID):
-                    find_event('5')
-                    print('\n')
-                    print("Please select what event you would like to volunteer for:\n")
-                    eventID = input('> ')
-                    if check_event(eventID):
-                       volunteer_event(eventID, volunteerID)
+                if check_volunteer(currentPatron):
+                    print("Patron is already in Volunteer table\n")
+                else:
+                    print("Adding Patron to Volunteer table...\n") 
+                    add_volunteer(currentPatron)
+                    
+                find_event('5')
+                print('\n')
+                print("Please select what event you would like to volunteer for:\n")
+                eventID = input('> ')
+                if check_event(eventID):
+                    volunteer_event(eventID, currentPatron)
 
                 input('press enter to continute...')
             case '8':
