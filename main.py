@@ -631,18 +631,26 @@ def runUI():
     # grab the patronID which will be used for operations such as borrowing, returning, etc.
     print_welcome()
 
-    currentPatron = input("> ")
-    while not currentPatron.isdigit():
-        print("\n" * 4)
-        print(f"{currentPatron} is INVALID....PatronID must be a number!")
-        print("If you do not have a PatronID, enter 0 to continue as a guest with limited functionality.")
-        print("\n" * 2)
-        print("PatronID:")
+    i = 0
+    currentPatron = ""
+    isPatron = False
+
+    while not currentPatron.isdigit() or (not isPatron and currentPatron != "0"):
+        if i !=0:
+            print("\n" * 4)
+            print(f"{currentPatron} is INVALID....PatronID must be a number!")
+            print("If you do not have a PatronID, enter 0 to continue as a guest with limited functionality.")
+            print("\n" * 2)
+            print("PatronID:")
+        i +=1
 
         currentPatron = input("> ")
-
+        if currentPatron.isdigit():
+            isPatron = checkPatronIDValid(int(currentPatron))
+        else:
+            isPatron = False
     # confirm that user is a patron
-    isPatron = checkPatronIDValid(int(currentPatron))
+
 
     while True:
         print(MENU_OPTIONS)
