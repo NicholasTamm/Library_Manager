@@ -582,7 +582,8 @@ def return_item(currentPatron: str):
         if toReturn.isdigit():
             if int(toReturn) in range(len(loan_list)):
                 loanID_to_return = loan_list[int(toReturn)][0]
-
+                itemID_to_return = loan_list[int(toReturn)][1]
+                printTable(DB_find_item(itemID=itemID_to_return), itemsAttributes)
                 # return item
                 DB_return_item(loanID_to_return)
                 print("Your item was successfully returned!")
