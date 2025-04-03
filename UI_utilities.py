@@ -10,7 +10,7 @@ FIND_ITEM_MENU_INPUTS = [
 OPTION_INTRO = '''
 {}
 Press enter if unknown or you want to skip.
-Enter 'x' to skip the current and rest of the prompts (cannot use on itemID.)'''
+Enter 'x' to skip the current and rest of the prompts (cannot use on the first option).'''
 
 
 
@@ -57,9 +57,11 @@ def print_welcome():
     print("PatronID:")
 
 
-def get_user_item_input(ForPrinting=True)->list:
+def get_user_item_input(ForPrinting=True, ForDonation=False)->list:
     params = []
     for option in FIND_ITEM_MENU_INPUTS:
+        if ForDonation and option == 'ItemID: ':
+            continue
         # print out each filter option and get the input
         print(option)
         find_input = input("> ")

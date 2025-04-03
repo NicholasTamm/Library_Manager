@@ -37,6 +37,8 @@ Please select what kind of assistance you require:
 itemsAttributes = ['itemID', 'Title', 'Author First Name', 'Author Last Name', 'Format', 'F_NF', 'CallNumber',
                    'Status', 'Availability']
 
+formatsAvailable = ['Book', 'eBook', 'CD', 'scientific journal', 'record', 'DVD', 'Blu ray', 'magazine']
+
 
 def checkPatronIDValid(PatronID: int) -> bool:
     myQuery = '''
@@ -295,6 +297,8 @@ def DB_find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
             FindItemQuery += f"I.{attribute}={value}"
         else:
             FindItemQuery += f"{attribute}='{value}'"
+
+    FindItemQuery += " ORDER BY I.format, I.title"
 
     ### TODO: test the execution of the query
     with sqlite3.connect("library.db") as conn:
@@ -596,7 +600,7 @@ def find_item():
     # check for illegal cases
     if userInput == [] or all(entry == "" for entry in userInput):
         print("Must enter at least one parameter!")
-        pass
+        return
     elif 'p' in userInput:
         itemsRows = DB_find_item()
     else:
@@ -617,6 +621,7 @@ def borrow_item(currentPatron: str):
     # check for illegal cases else call query
     if userInput == [] or all(entry == "" for entry in userInput):
         print("Must enter at least one parameter!")
+        return
     elif 'p' in userInput:
         itemsRows = DB_find_item(isBorrowed=0)
     else:
@@ -791,12 +796,28 @@ def runUI():
 
 
             case '4':
-                print_function_intro("DONATE AN ITEM:")
-                donate_inputs = get_user_item_input(ForPrinting=False)
+                print('\n' * 5)
+                print('-' * 30)
+                print("DONATE AN ITEM:")
+                donate_inputs = get_user_item_input(ForPrinting=False, ForDonation=True)
                 if donate_inputs == [] or all(entry == "" for entry in donate_inputs):
                     print("Must enter at least one parameter!")
+                    input("Press enter to return...")
+                    continue
+                elif any(entry == "" for entry in donate_inputs):
+                    print("Invalid input! Must enter all parameters!")
+                    input("Press enter to return...")
+                    continue
+                elif donate_inputs[3] not in formatsAvailable:
+                    print("Invalid format! Formats must be one of the following:")
+                    print(formatsAvailable)
+                    input("Press enter to return...")
+                    continue
                 else:
                     DB_add_item(*donate_inputs)
+                    printTable([donate_inputs], ['Title', 'Author First Name', 'Author Last Name', 'Format'])
+                    print("Item successfully donated!")
+                    input("Press enter to return...")
 
 
             case '5':
