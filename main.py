@@ -408,12 +408,15 @@ def add_volunteer(volunteerID):
     '''
     with sqlite3.connect("library.db") as conn:
         cur = conn.cursor()
-        try: cur.execute(idQuery, (volunteerID,))
+        try:
+            cur.execute(idQuery, (volunteerID,))
+            conn.commit()
+
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
 
-def check_volunteer(volunteerID): 
+def check_volunteer(volunteerID):
     idQuery = '''
     SELECT COUNT(*)
     FROM Volunteer
@@ -697,7 +700,7 @@ def register_guest_as_patron():
     FROM Patron
     WHERE firstName = ? AND lastName = ?
     '''
-    
+
     names = ["",""]
 
     while not all(name.isalpha() for name in names):
@@ -718,15 +721,15 @@ def register_guest_as_patron():
             cur.execute(queryNewPatron, names)
             rows = cur.fetchall()
             if rows:
-                printTable(rows, ["PatronID", "First Name", "Last Name"])
+                printTable([rows[len(rows)-1]], ["PatronID", "First Name", "Last Name"])
             else:
                 print("Error: No Patrons found with those names! Did not register Patron properly!")
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
             exit(1)
-    
-    
-    
+
+
+
 
 def runUI():
     # check if current user is a patron or just going to volunteer
@@ -833,18 +836,23 @@ def runUI():
                 print('-' * 30)
                 if not isPatron:
                     print("Sorry this is a patron only function...Press enter to return...")
+                    input('press enter to continue...')
                     continue
                 else:
                     register_event(currentPatron)
                 input('press enter to continue...')
             case '7':
-                
+                if not isPatron:
+                    print("Sorry this is a patron only function...Press enter to return...")
+                    input('press enter to continue...')
+                    continue
+
                 if check_volunteer(currentPatron):
                     print("Patron is already in Volunteer table\n")
                 else:
-                    print("Adding Patron to Volunteer table...\n") 
+                    print("Adding Patron to Volunteer table...\n")
                     add_volunteer(currentPatron)
-                    
+
                 find_event('5')
                 print('\n')
                 print("Please select what event you would like to volunteer for:\n")
@@ -867,30 +875,6 @@ def runUI():
             case 'x':
                 print("Closing application...")
                 break
-            case 'p':
-
-                print("Connecting to library.db and printing all table contents...\n")
-
-                with sqlite3.connect("library.db") as conn:
-                    cur = conn.cursor()
-
-                    # Get all user-defined table names
-                    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
-                    tables = [row[0] for row in cur.fetchall()]
-
-                    for table in tables:
-                        print(f"\n--- {table} ---")
-                        try:
-                            cur.execute(f"SELECT * FROM {table}")
-                            rows = cur.fetchall()
-                            for row in rows:
-                                print(row)
-                            if not rows:
-                                print("(No rows)")
-                        except sqlite3.Error as e:
-                            print(f"Error reading table {table}: {e}")
-
-                input("\nDone. Press enter to continue...")
             case _:
                 print(f"You entered {choice}, please enter a valid number corresponding to a menu option")
 
@@ -903,6 +887,7 @@ def main():
     if not os.path.exists('library.db'):
         DB_initialize()
 
+    # call UI function
     runUI()
 
 
