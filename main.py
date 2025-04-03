@@ -37,6 +37,8 @@ Please select what kind of assistance you require:
 itemsAttributes = ['itemID', 'Title', 'Author First Name', 'Author Last Name', 'Format', 'F_NF', 'CallNumber',
                    'Status', 'Availability']
 
+formatsAvailable = ['Book', 'eBook', 'CD', 'scientific journal', 'record', 'DVD', 'Blu ray', 'magazine']
+
 
 def checkPatronIDValid(PatronID: int) -> bool:
     myQuery = '''
@@ -156,9 +158,10 @@ def DB_initialize():
     '''
     create_Volunteer = ''' 
     CREATE TABLE Volunteer (
-        volunteerID INTEGER PRIMARY KEY AUTOINCREMENT, 
+        volunteerID INTEGER PRIMARY KEY, 
         firstName TEXT CHECK (LENGTH(firstName) <= 50),
-        lastName TEXT CHECK (LENGTH(lastName) <= 100)
+        lastName TEXT CHECK (LENGTH(lastName) <= 100),
+        FOREIGN KEY(volunteerID) REFERENCES Patron(patronID) ON DELETE CASCADE
     );
     '''
     create_Event = ''' 
@@ -295,6 +298,8 @@ def DB_find_item(itemID: str = "", title: str = "", authorFirstName: str = "",
         else:
             FindItemQuery += f"{attribute}='{value}'"
 
+    FindItemQuery += " ORDER BY I.format, I.title"
+
     ### TODO: test the execution of the query
     with sqlite3.connect("library.db") as conn:
         cur = conn.cursor()
@@ -395,10 +400,97 @@ def DB_add_item(title: str = "", authorFirstName: str = "",
         except sqlite3.Error as e:
             print(f"sqlite encountered error: {e}")
 
+def add_volunteer(volunteerID):
+    idQuery = '''
+    INSERT INTO Volunteer(volunteerID, firstName, LastName)
+    SELECT patronID, firstName, lastName FROM Patron
+    WHERE patronID = ?
+    '''
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try: cur.execute(idQuery, (volunteerID,))
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
+
+def check_volunteer(volunteerID): 
+    idQuery = '''
+    SELECT COUNT(*)
+    FROM Volunteer
+    WHERE volunteerID = ?
+    '''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(idQuery, (volunteerID,))
+            rows = cur.fetchall()
+
+            match (rows[0][0]):
+                case 0:
+                    print("Not a valid volunteerID!")
+                    return False
+                case 1:
+                    print("valid id")
+                    return True
+                case _:
+                    for row in rows:
+                        print(row)
+                    print("more than one volunteerID!")
+                    return False
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
+
+def check_event(eventID):
+    idQuery = '''
+    SELECT COUNT(*)
+    FROM Volunteer
+    WHERE volunteerID = ?
+    '''
+
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(idQuery, (eventID,))
+            rows = cur.fetchall()
+
+            match (rows[0][0]):
+                case 0:
+                    print("Not a valid event!")
+                    return False
+                case 1:
+                    return True
+                case _:
+                    for row in rows:
+                        print(row)
+                    print("More than one event selected. Please only choose 1.")
+                    return False
+
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+            exit(1)
+
+def volunteer_event(eventID, volunteerID):
+    myQuery = '''
+        INSERT INTO Event_Volunteer (eventID, volunteerID) VALUES
+        (:event, :volunteer)
+    '''
+    with sqlite3.connect("library.db") as conn:
+        cur = conn.cursor()
+        try:
+            cur.execute(myQuery, {'event': eventID, 'volunteer': volunteerID})
+            conn.commit()
+            cur.execute("SELECT * FROM Event_Volunteer WHERE volunteerID = ?", (volunteerID,))
+            print(cur.fetchall())
+        except sqlite3.Error as e:
+            print(f"sqlite encountered error: {e}")
+
 
 def find_event(recommended):
     myQuery = '''
-    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time 
+    SELECT eventID, eventName, type, advisedFor, roomNumber, date, time
     FROM Event
     '''
 
@@ -508,7 +600,7 @@ def find_item():
     # check for illegal cases
     if userInput == [] or all(entry == "" for entry in userInput):
         print("Must enter at least one parameter!")
-        pass
+        return
     elif 'p' in userInput:
         itemsRows = DB_find_item()
     else:
@@ -529,6 +621,7 @@ def borrow_item(currentPatron: str):
     # check for illegal cases else call query
     if userInput == [] or all(entry == "" for entry in userInput):
         print("Must enter at least one parameter!")
+        return
     elif 'p' in userInput:
         itemsRows = DB_find_item(isBorrowed=0)
     else:
@@ -703,12 +796,28 @@ def runUI():
 
 
             case '4':
-                print_function_intro("DONATE AN ITEM:")
-                donate_inputs = get_user_item_input(ForPrinting=False)
+                print('\n' * 5)
+                print('-' * 30)
+                print("DONATE AN ITEM:")
+                donate_inputs = get_user_item_input(ForPrinting=False, ForDonation=True)
                 if donate_inputs == [] or all(entry == "" for entry in donate_inputs):
                     print("Must enter at least one parameter!")
+                    input("Press enter to return...")
+                    continue
+                elif any(entry == "" for entry in donate_inputs):
+                    print("Invalid input! Must enter all parameters!")
+                    input("Press enter to return...")
+                    continue
+                elif donate_inputs[3] not in formatsAvailable:
+                    print("Invalid format! Formats must be one of the following:")
+                    print(formatsAvailable)
+                    input("Press enter to return...")
+                    continue
                 else:
                     DB_add_item(*donate_inputs)
+                    printTable([donate_inputs], ['Title', 'Author First Name', 'Author Last Name', 'Format'])
+                    print("Item successfully donated!")
+                    input("Press enter to return...")
 
 
             case '5':
@@ -729,7 +838,21 @@ def runUI():
                     register_event(currentPatron)
                 input('press enter to continue...')
             case '7':
-                print("not available yet")
+                
+                if check_volunteer(currentPatron):
+                    print("Patron is already in Volunteer table\n")
+                else:
+                    print("Adding Patron to Volunteer table...\n") 
+                    add_volunteer(currentPatron)
+                    
+                find_event('5')
+                print('\n')
+                print("Please select what event you would like to volunteer for:\n")
+                eventID = input('> ')
+                if check_event(eventID):
+                    volunteer_event(eventID, currentPatron)
+
+                input('press enter to continute...')
             case '8':
                 print('\n' * 5)
                 print('-' * 30)
